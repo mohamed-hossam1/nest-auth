@@ -7,6 +7,7 @@ export class AppController {
 
   @Get()
   getHello(): string {
+    throw new Error('Not implemented');
     return this.appService.getHello();
   }
 }
