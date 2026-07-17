@@ -1,13 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  @ApiOkResponse({ description: "Returns 'Hello World'" })
   @Get()
   getHello(): string {
-    throw new Error('Not implemented');
     return this.appService.getHello();
   }
 }
