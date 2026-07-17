@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, MinLength } from 'class-validator';
-import { SWAGGER_EXAMPLES } from '../../common/constants/examples.constant';
+import { SWAGGER_EXAMPLES } from 'src/common/constants/examples.constant';
+import { VALIDATION_MESSAGES } from 'src/common/constants/messages.constant';
 
 export class SignInDto {
   @ApiProperty({
@@ -15,6 +16,6 @@ export class SignInDto {
     required: true,
   })
   @IsString()
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @MinLength(6, { message: VALIDATION_MESSAGES.PASSWORD_MIN_LENGTH })
   password: string;
 }

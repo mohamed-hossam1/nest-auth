@@ -1,0 +1,4 @@
+export const AUTH_CONFIG = {
+  VERIFY_TOKEN_TTL_MS: 24 * 60 * 60 * 1000,
+  VERIFICATION_RESEND_COOLDOWN_MS: 60 * 1000,
+} as const;
