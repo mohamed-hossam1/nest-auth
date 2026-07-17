@@ -7,6 +7,7 @@ import { EmailModule } from './email/email.module';
 import { AuthService } from './auth/auth.service';
 import { AuthModule } from './auth/auth.module';
 import { HashingModule } from './hashing/hashing.module';
+import { TokensModule } from './tokens/tokens.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { HashingModule } from './hashing/hashing.module';
     EmailModule,
     AuthModule,
     HashingModule,
+    TokensModule,
   ],
   controllers: [AppController],
   providers: [AppService, AuthService],
