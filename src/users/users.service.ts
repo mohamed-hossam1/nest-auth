@@ -22,6 +22,15 @@ export class UsersService {
     return user || null;
   }
 
+  async findByVerifyToken(verifyToken: string) {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.verifyToken, verifyToken))
+      .limit(1);
+    return user || null;
+  }
+
   async findAll() {
     return await db.select().from(users);
   }

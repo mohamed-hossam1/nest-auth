@@ -1,5 +1,6 @@
 import { TokensService } from './../tokens/tokens.service';
 import {
+  BadRequestException,
   ConflictException,
   HttpException,
   HttpStatus,
@@ -81,12 +82,51 @@ export class AuthService {
     if (!password)
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_CREDENTIALS);
 
+    return this.issueAuthSession(user, res, AUTH_MESSAGES.SIGN_IN_SUCCESS);
+  }
+
+  async verifyEmail(token: string, res: Response) {
+    if (!token) {
+      throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
+    }
+
+    const user = await this.userService.findByVerifyToken(token);
+    if (!user) {
+      throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
+    }
+
+    if (user.isVerified) {
+      return { message: AUTH_MESSAGES.EMAIL_ALREADY_VERIFIED };
+    }
+
+    if (new Date(user.verifyTokenExpiry).getTime() < Date.now()) {
+      throw new BadRequestException(AUTH_MESSAGES.VERIFY_TOKEN_EXPIRED);
+    }
+
+    const verifiedUser = await this.userService.update(user.id, {
+      isVerified: true,
+      verifyToken: crypto.randomBytes(32).toString('hex'),
+      verifyTokenExpiry: new Date(0),
+    });
+
+    if (!verifiedUser) {
+      throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
+    }
+
+    return this.issueAuthSession(
+      verifiedUser,
+      res,
+      AUTH_MESSAGES.EMAIL_VERIFIED_SUCCESS,
+    );
+  }
+
+  private async issueAuthSession(user: User, res: Response, message: string) {
     const tokens = await this.tokensService.generateTokens(user);
     await this.tokensService.saveRefreshToken(user.id, tokens.refreshToken);
     this.tokensService.setRefreshTokenToCookie(res, tokens.refreshToken);
 
     return {
-      message: AUTH_MESSAGES.SIGN_IN_SUCCESS,
+      message,
       accessToken: tokens.accessToken,
       user: {
         id: user.id,
