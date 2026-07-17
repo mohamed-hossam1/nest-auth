@@ -2,9 +2,11 @@ export const AUTH_MESSAGES = {
   SIGN_UP_SUCCESS:
     'Registration Successful. Please check your email to verify your account',
   SIGN_IN_SUCCESS: 'Login successful',
+  REFRESH_SUCCESS: 'Token refreshed successfully',
   EMAIL_ALREADY_EXISTS: 'An account with this email already exists',
   INVALID_CREDENTIALS: 'Invalid email or password',
   EMAIL_NOT_VERIFIED: 'Please verify your email',
+  INVALID_REFRESH_TOKEN: 'Invalid or expired refresh token',
   VERIFICATION_RESEND_COOLDOWN:
     'Please wait before requesting another verification email',
 } as const;
