@@ -191,7 +191,7 @@ export class AuthService {
     const verificationEmail = new VerificationEmail(
       email,
       name,
-      `${this.configService.get<string>('APP_URL')}/auth/verify-email?token=${verifyToken}`,
+      `${this.configService.get<string>('APP_URL')}/api/auth/verify-email?token=${verifyToken}`,
     );
     void this.emailService.send(verificationEmail).catch(() => undefined);
   }

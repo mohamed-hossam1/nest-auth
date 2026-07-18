@@ -22,7 +22,7 @@ import { TokensService } from 'src/tokens/tokens.service';
 import { SignUpDto } from './dtos/sign-up.dto';
 import { SignInDto } from './dtos/sign-in.dto';
 import type { Request, Response } from 'express';
-import { AccessTokenGuard } from './guards/access-token.guard';
+import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { User } from 'src/common/decorators/user.decorator';
 import type { AuthUser } from 'src/common/types/auth-user.type';
 
