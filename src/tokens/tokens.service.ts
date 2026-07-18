@@ -68,6 +68,23 @@ export class TokensService {
     });
   }
 
+  async issueAuthSession(user: User, res: Response, message: string) {
+    const tokens = await this.generateTokens(user);
+    await this.saveRefreshToken(user.id, tokens.refreshToken);
+    this.setRefreshTokenToCookie(res, tokens.refreshToken);
+
+    return {
+      message,
+      accessToken: tokens.accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    };
+  }
+
   async refreshToken(refreshToken: string | undefined, res: Response) {
     if (!refreshToken) {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);

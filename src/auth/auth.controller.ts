@@ -17,27 +17,36 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
 import { TokensService } from 'src/tokens/tokens.service';
 import { SignUpDto } from './dtos/sign-up.dto';
 import { SignInDto } from './dtos/sign-in.dto';
+import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import type { Request, Response } from 'express';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { User } from 'src/common/decorators/user.decorator';
 import type { AuthUser } from 'src/common/types/auth-user.type';
+import { SignUpService } from './services/sign-up.service';
+import { SignInService } from './services/sign-in.service';
+import { VerifyEmailService } from './services/verify-email.service';
+import { LogoutService } from './services/logout.service';
+import { ForgotPasswordService } from './services/forgot-password.service';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
-    private readonly authService: AuthService,
+    private readonly signUpService: SignUpService,
+    private readonly signInService: SignInService,
+    private readonly verifyEmailService: VerifyEmailService,
+    private readonly logoutService: LogoutService,
+    private readonly forgotPasswordService: ForgotPasswordService,
     private readonly tokensService: TokensService,
   ) {}
 
   @Post('sign-up')
   @ApiOperation({ summary: 'Register a new account' })
   signUp(@Body() signUpDto: SignUpDto) {
-    return this.authService.signUp(signUpDto);
+    return this.signUpService.signUp(signUpDto);
   }
 
   @Post('sign-in')
@@ -47,7 +56,7 @@ export class AuthController {
     @Body() signInDto: SignInDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.signIn(signInDto, res);
+    return this.signInService.signIn(signInDto, res);
   }
 
   @Get('verify-email')
@@ -57,7 +66,7 @@ export class AuthController {
     @Query('token') token: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.verifyEmail(token, res);
+    return this.verifyEmailService.verifyEmail(token, res);
   }
 
   @Post('refresh')
@@ -82,6 +91,13 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout and invalidate refresh token' })
   logout(@User() user: AuthUser, @Res({ passthrough: true }) res: Response) {
-    return this.authService.logout(user.id, res);
+    return this.logoutService.logout(user.id, res);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request a password reset email' })
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.forgotPasswordService.forgotPassword(forgotPasswordDto);
   }
 }

@@ -1,33 +1,27 @@
-import { TokensService } from './../tokens/tokens.service';
 import {
-  BadRequestException,
   ConflictException,
   HttpException,
   HttpStatus,
   Injectable,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { UsersService } from 'src/users/users.service';
-import { SignUpDto } from './dtos/sign-up.dto';
-import { HashingService } from 'src/hashing/hashing.service';
-import crypto from 'crypto';
-import { EmailService } from 'src/email/email.service';
-import { VerificationEmail } from 'src/email/templates/verification.email';
 import { ConfigService } from '@nestjs/config';
-import { SignInDto } from './dtos/sign-in.dto';
-import { Response } from 'express';
-import { User } from 'src/db/schema';
+import crypto from 'crypto';
 import { AUTH_CONFIG } from 'src/common/constants/auth.constant';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { User } from 'src/db/schema';
+import { EmailService } from 'src/email/email.service';
+import { VerificationEmail } from 'src/email/templates/verification.email';
+import { HashingService } from 'src/hashing/hashing.service';
+import { UsersService } from 'src/users/users.service';
+import { SignUpDto } from '../dtos/sign-up.dto';
 
 @Injectable()
-export class AuthService {
+export class SignUpService {
   constructor(
     private readonly userService: UsersService,
     private readonly hashingService: HashingService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
-    private readonly tokensService: TokensService,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
@@ -64,84 +58,6 @@ export class AuthService {
 
       throw new ConflictException(AUTH_MESSAGES.EMAIL_ALREADY_EXISTS);
     }
-  }
-
-  async signIn(signInDto: SignInDto, res: Response) {
-    const user = await this.userService.findByEmail(signInDto.email);
-
-    if (!user)
-      throw new UnauthorizedException(AUTH_MESSAGES.INVALID_CREDENTIALS);
-    if (!user.isVerified)
-      throw new UnauthorizedException(AUTH_MESSAGES.EMAIL_NOT_VERIFIED);
-
-    const password = await this.hashingService.compare(
-      signInDto.password,
-      user.passwordHash,
-    );
-
-    if (!password)
-      throw new UnauthorizedException(AUTH_MESSAGES.INVALID_CREDENTIALS);
-
-    return this.issueAuthSession(user, res, AUTH_MESSAGES.SIGN_IN_SUCCESS);
-  }
-
-  async verifyEmail(token: string, res: Response) {
-    if (!token) {
-      throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
-    }
-
-    const user = await this.userService.findByVerifyToken(token);
-    if (!user) {
-      throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
-    }
-
-    if (user.isVerified) {
-      return { message: AUTH_MESSAGES.EMAIL_ALREADY_VERIFIED };
-    }
-
-    if (new Date(user.verifyTokenExpiry).getTime() < Date.now()) {
-      throw new BadRequestException(AUTH_MESSAGES.VERIFY_TOKEN_EXPIRED);
-    }
-
-    const verifiedUser = await this.userService.update(user.id, {
-      isVerified: true,
-      verifyToken: crypto.randomBytes(32).toString('hex'),
-      verifyTokenExpiry: new Date(0),
-    });
-
-    if (!verifiedUser) {
-      throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
-    }
-
-    return this.issueAuthSession(
-      verifiedUser,
-      res,
-      AUTH_MESSAGES.EMAIL_VERIFIED_SUCCESS,
-    );
-  }
-
-  async logout(userId: string, res: Response) {
-    await this.userService.update(userId, { refreshTokenHash: null });
-    this.tokensService.clearRefreshTokenCookie(res);
-
-    return { message: AUTH_MESSAGES.LOGOUT_SUCCESS };
-  }
-
-  private async issueAuthSession(user: User, res: Response, message: string) {
-    const tokens = await this.tokensService.generateTokens(user);
-    await this.tokensService.saveRefreshToken(user.id, tokens.refreshToken);
-    this.tokensService.setRefreshTokenToCookie(res, tokens.refreshToken);
-
-    return {
-      message,
-      accessToken: tokens.accessToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-    };
   }
 
   private async handleExistingSignUp(user: User) {

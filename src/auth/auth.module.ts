@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { HashingModule } from 'src/hashing/hashing.module';
@@ -7,6 +6,11 @@ import { TokensModule } from 'src/tokens/tokens.module';
 import { UsersModule } from 'src/users/users.module';
 import { EmailModule } from 'src/email/email.module';
 import { ConfigModule } from '@nestjs/config';
+import { SignUpService } from './services/sign-up.service';
+import { SignInService } from './services/sign-in.service';
+import { VerifyEmailService } from './services/verify-email.service';
+import { LogoutService } from './services/logout.service';
+import { ForgotPasswordService } from './services/forgot-password.service';
 
 @Module({
   imports: [
@@ -17,7 +21,13 @@ import { ConfigModule } from '@nestjs/config';
     ConfigModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService],
+  providers: [
+    SignUpService,
+    SignInService,
+    VerifyEmailService,
+    LogoutService,
+    ForgotPasswordService,
+    AccessTokenGuard,
+  ],
 })
 export class AuthModule {}

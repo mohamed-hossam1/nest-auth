@@ -15,6 +15,10 @@ export const AUTH_MESSAGES = {
   VERIFY_TOKEN_EXPIRED: 'Verification token has expired',
   VERIFICATION_RESEND_COOLDOWN:
     'Please wait before requesting another verification email',
+  FORGOT_PASSWORD_SUCCESS:
+    'If an account exists for this email, a password reset link has been sent',
+  PASSWORD_RESET_RESEND_COOLDOWN:
+    'Please wait before requesting another password reset email',
 } as const;
 
 export const VALIDATION_MESSAGES = {
