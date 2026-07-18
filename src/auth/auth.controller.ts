@@ -75,4 +75,13 @@ export class AuthController {
   me(@User() user: AuthUser) {
     return { user };
   }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout and invalidate refresh token' })
+  logout(@User() user: AuthUser, @Res({ passthrough: true }) res: Response) {
+    return this.authService.logout(user.id, res);
+  }
 }

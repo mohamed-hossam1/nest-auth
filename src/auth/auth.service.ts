@@ -120,6 +120,12 @@ export class AuthService {
     );
   }
 
+  async logout(userId: string, res: Response) {
+    await this.userService.update(userId, { refreshTokenHash: null });
+    this.tokensService.clearRefreshTokenCookie(res);
+
+    return { message: AUTH_MESSAGES.LOGOUT_SUCCESS };
+  }
 
   private async issueAuthSession(user: User, res: Response, message: string) {
     const tokens = await this.tokensService.generateTokens(user);

@@ -60,6 +60,14 @@ export class TokensService {
     });
   }
 
+  clearRefreshTokenCookie(res: Response) {
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: this.configService.get('NODE_ENV') === 'production',
+      sameSite: 'strict',
+    });
+  }
+
   async refreshToken(refreshToken: string | undefined, res: Response) {
     if (!refreshToken) {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
