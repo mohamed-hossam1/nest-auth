@@ -9,6 +9,6 @@ import { ConfigModule } from '@nestjs/config';
 @Module({
   imports: [JwtModule, ConfigModule, HashingModule, UsersModule],
   providers: [TokensService, BcryptService],
-  exports: [TokensService],
+  exports: [TokensService, JwtModule],
 })
 export class TokensModule {}

@@ -9,6 +9,7 @@ export const AUTH_MESSAGES = {
   INVALID_CREDENTIALS: 'Invalid email or password',
   EMAIL_NOT_VERIFIED: 'Please verify your email',
   INVALID_REFRESH_TOKEN: 'Invalid or expired refresh token',
+  INVALID_ACCESS_TOKEN: 'Invalid or expired access token',
   INVALID_VERIFY_TOKEN: 'Invalid verification token',
   VERIFY_TOKEN_EXPIRED: 'Verification token has expired',
   VERIFICATION_RESEND_COOLDOWN:

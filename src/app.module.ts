@@ -4,7 +4,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { EmailModule } from './email/email.module';
-import { AuthService } from './auth/auth.service';
 import { AuthModule } from './auth/auth.module';
 import { HashingModule } from './hashing/hashing.module';
 import { TokensModule } from './tokens/tokens.module';
@@ -19,6 +18,6 @@ import { TokensModule } from './tokens/tokens.module';
     TokensModule,
   ],
   controllers: [AppController],
-  providers: [AppService, AuthService],
+  providers: [AppService],
 })
 export class AppModule {}

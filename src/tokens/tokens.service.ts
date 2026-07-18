@@ -60,7 +60,7 @@ export class TokensService {
     });
   }
 
-  async refreshToken(refreshToken: string, res: Response) {
+  async refreshToken(refreshToken: string | undefined, res: Response) {
     if (!refreshToken) {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }

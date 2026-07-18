@@ -120,6 +120,7 @@ export class AuthService {
     );
   }
 
+
   private async issueAuthSession(user: User, res: Response, message: string) {
     const tokens = await this.tokensService.generateTokens(user);
     await this.tokensService.saveRefreshToken(user.id, tokens.refreshToken);
