@@ -6,8 +6,11 @@ import { setupSwagger } from './swagger-setup';
 import cookieParser from 'cookie-parser';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AppModule } from './app.module';
+import { ensureDefaultRoles } from './db/seed-roles';
 
 async function bootstrap() {
+  await ensureDefaultRoles();
+
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);

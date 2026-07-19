@@ -1,46 +1,121 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
-import { db } from 'src/db';
-import { NewUser, users } from 'src/db/schema';
+import { and, eq, isNull } from 'drizzle-orm';
+import { db, type DbTransaction } from 'src/db';
+import {
+  emailVerificationTokens,
+  NewUser,
+  passwordResetTokens,
+  refreshSessions,
+  roles,
+  User,
+  users,
+  UserWithRole,
+  type NewEmailVerificationToken,
+  type NewPasswordResetToken,
+  type NewRefreshSession,
+  type RefreshSession,
+} from 'src/db/schema';
+
+type DbExecutor = typeof db | DbTransaction;
 
 @Injectable()
 export class UsersService {
-  async findByEmail(email: string) {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
-    return user || null;
-  }
-  async findById(id: string) {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, id))
-      .limit(1);
-    return user || null;
+  private mapUserWithRole(
+    user: User,
+    roleName: string | null,
+  ): UserWithRole | null {
+    if (!user || !roleName) {
+      return null;
+    }
+
+    return {
+      ...user,
+      role: roleName,
+    };
   }
 
-  async findByVerifyToken(verifyToken: string) {
-    const [user] = await db
-      .select()
+  private async selectUserWithRole(
+    executor: DbExecutor,
+    whereClause: ReturnType<typeof eq>,
+  ): Promise<UserWithRole | null> {
+    const [row] = await executor
+      .select({
+        user: users,
+        roleName: roles.name,
+      })
       .from(users)
-      .where(eq(users.verifyToken, verifyToken))
+      .innerJoin(roles, eq(users.roleId, roles.id))
+      .where(whereClause)
       .limit(1);
-    return user || null;
+
+    if (!row) {
+      return null;
+    }
+
+    return this.mapUserWithRole(row.user, row.roleName);
   }
 
-  async findAll() {
-    return await db.select().from(users);
+  async findByEmail(
+    email: string,
+    executor: DbExecutor = db,
+  ): Promise<UserWithRole | null> {
+    return this.selectUserWithRole(executor, eq(users.email, email));
   }
 
-  async create(data: NewUser) {
-    const [user] = await db.insert(users).values(data).returning();
-    return user;
+  async findById(
+    id: string,
+    executor: DbExecutor = db,
+  ): Promise<UserWithRole | null> {
+    return this.selectUserWithRole(executor, eq(users.id, id));
   }
-  async update(id: string, data: Partial<NewUser>) {
-    const [user] = await db
+
+  async findAll(): Promise<UserWithRole[]> {
+    const rows = await db
+      .select({
+        user: users,
+        roleName: roles.name,
+      })
+      .from(users)
+      .innerJoin(roles, eq(users.roleId, roles.id));
+
+    return rows
+      .map((row) => this.mapUserWithRole(row.user, row.roleName))
+      .filter((user): user is UserWithRole => user !== null);
+  }
+
+  async findRoleIdByName(
+    name: string,
+    executor: DbExecutor = db,
+  ): Promise<string | null> {
+    const [role] = await executor
+      .select({ id: roles.id })
+      .from(roles)
+      .where(eq(roles.name, name))
+      .limit(1);
+
+    return role?.id ?? null;
+  }
+
+  async create(
+    data: NewUser,
+    executor: DbExecutor = db,
+  ): Promise<UserWithRole> {
+    const [user] = await executor.insert(users).values(data).returning();
+    const withRole = await this.findById(user.id, executor);
+
+    if (!withRole) {
+      throw new Error('Failed to load created user with role');
+    }
+
+    return withRole;
+  }
+
+  async update(
+    id: string,
+    data: Partial<NewUser>,
+    executor: DbExecutor = db,
+  ): Promise<UserWithRole | null> {
+    const [user] = await executor
       .update(users)
       .set({
         ...data,
@@ -48,10 +123,211 @@ export class UsersService {
       })
       .where(eq(users.id, id))
       .returning();
-    return user || null;
+
+    if (!user) {
+      return null;
+    }
+
+    return this.findById(user.id, executor);
   }
 
-  async delete(id: string) {
-    return await db.delete(users).where(eq(users.id, id));
+  async delete(id: string, executor: DbExecutor = db) {
+    return executor.delete(users).where(eq(users.id, id));
+  }
+
+  async findEmailVerificationTokenById(id: string) {
+    const [row] = await db
+      .select({
+        token: emailVerificationTokens,
+        user: users,
+        roleName: roles.name,
+      })
+      .from(emailVerificationTokens)
+      .innerJoin(users, eq(emailVerificationTokens.userId, users.id))
+      .innerJoin(roles, eq(users.roleId, roles.id))
+      .where(eq(emailVerificationTokens.id, id))
+      .limit(1);
+
+    if (!row) {
+      return null;
+    }
+
+    const user = this.mapUserWithRole(row.user, row.roleName);
+    if (!user) {
+      return null;
+    }
+
+    return { token: row.token, user };
+  }
+
+  async findEmailVerificationTokenByUserId(
+    userId: string,
+    executor: DbExecutor = db,
+  ) {
+    const [token] = await executor
+      .select()
+      .from(emailVerificationTokens)
+      .where(eq(emailVerificationTokens.userId, userId))
+      .limit(1);
+
+    return token ?? null;
+  }
+
+  async upsertEmailVerificationToken(
+    data: NewEmailVerificationToken,
+    executor: DbExecutor = db,
+  ) {
+    const [token] = await executor
+      .insert(emailVerificationTokens)
+      .values(data)
+      .onConflictDoUpdate({
+        target: emailVerificationTokens.userId,
+        set: {
+          tokenHash: data.tokenHash,
+          expiresAt: data.expiresAt,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    return token;
+  }
+
+  async deleteEmailVerificationToken(
+    userId: string,
+    executor: DbExecutor = db,
+  ) {
+    return executor
+      .delete(emailVerificationTokens)
+      .where(eq(emailVerificationTokens.userId, userId));
+  }
+
+  async findPasswordResetTokenById(id: string) {
+    const [row] = await db
+      .select({
+        token: passwordResetTokens,
+        user: users,
+        roleName: roles.name,
+      })
+      .from(passwordResetTokens)
+      .innerJoin(users, eq(passwordResetTokens.userId, users.id))
+      .innerJoin(roles, eq(users.roleId, roles.id))
+      .where(eq(passwordResetTokens.id, id))
+      .limit(1);
+
+    if (!row) {
+      return null;
+    }
+
+    const user = this.mapUserWithRole(row.user, row.roleName);
+    if (!user) {
+      return null;
+    }
+
+    return { token: row.token, user };
+  }
+
+  async findPasswordResetTokenByUserId(
+    userId: string,
+    executor: DbExecutor = db,
+  ) {
+    const [token] = await executor
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.userId, userId))
+      .limit(1);
+
+    return token ?? null;
+  }
+
+  async upsertPasswordResetToken(
+    data: NewPasswordResetToken,
+    executor: DbExecutor = db,
+  ) {
+    const [token] = await executor
+      .insert(passwordResetTokens)
+      .values(data)
+      .onConflictDoUpdate({
+        target: passwordResetTokens.userId,
+        set: {
+          tokenHash: data.tokenHash,
+          expiresAt: data.expiresAt,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    return token;
+  }
+
+  async deletePasswordResetToken(userId: string, executor: DbExecutor = db) {
+    return executor
+      .delete(passwordResetTokens)
+      .where(eq(passwordResetTokens.userId, userId));
+  }
+
+  async createRefreshSession(
+    data: NewRefreshSession,
+    executor: DbExecutor = db,
+  ): Promise<RefreshSession> {
+    const [session] = await executor
+      .insert(refreshSessions)
+      .values(data)
+      .returning();
+
+    return session;
+  }
+
+  async findRefreshSessionById(
+    id: string,
+    executor: DbExecutor = db,
+  ): Promise<RefreshSession | null> {
+    const [session] = await executor
+      .select()
+      .from(refreshSessions)
+      .where(eq(refreshSessions.id, id))
+      .limit(1);
+
+    return session ?? null;
+  }
+
+  async updateRefreshSession(
+    id: string,
+    data: Partial<NewRefreshSession> & { revokedAt?: Date | null },
+    executor: DbExecutor = db,
+  ): Promise<RefreshSession | null> {
+    const [session] = await executor
+      .update(refreshSessions)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(refreshSessions.id, id))
+      .returning();
+
+    return session ?? null;
+  }
+
+  async revokeRefreshSession(id: string, executor: DbExecutor = db) {
+    return this.updateRefreshSession(id, { revokedAt: new Date() }, executor);
+  }
+
+  async revokeAllRefreshSessions(userId: string, executor: DbExecutor = db) {
+    return executor
+      .update(refreshSessions)
+      .set({
+        revokedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(refreshSessions.userId, userId),
+          isNull(refreshSessions.revokedAt),
+        ),
+      );
+  }
+
+  async deleteRefreshSession(id: string, executor: DbExecutor = db) {
+    return executor.delete(refreshSessions).where(eq(refreshSessions.id, id));
   }
 }

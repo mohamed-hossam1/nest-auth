@@ -11,6 +11,7 @@ import { SignInService } from './services/sign-in.service';
 import { VerifyEmailService } from './services/verify-email.service';
 import { LogoutService } from './services/logout.service';
 import { ForgotPasswordService } from './services/forgot-password.service';
+import { ResetPasswordService } from './services/reset-password.service';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ForgotPasswordService } from './services/forgot-password.service';
     VerifyEmailService,
     LogoutService,
     ForgotPasswordService,
+    ResetPasswordService,
     AccessTokenGuard,
   ],
 })

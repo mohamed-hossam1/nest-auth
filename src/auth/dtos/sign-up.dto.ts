@@ -1,16 +1,16 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 import { SWAGGER_EXAMPLES } from 'src/common/constants/examples.constant';
 import { VALIDATION_MESSAGES } from 'src/common/constants/messages.constant';
 
 export class SignUpDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: SWAGGER_EXAMPLES.name,
-    required: true,
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  name: string;
+  name?: string;
 
   @ApiProperty({
     example: SWAGGER_EXAMPLES.email,

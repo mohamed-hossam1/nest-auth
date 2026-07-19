@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { Response } from 'express';
+import type { Request, Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { HashingService } from 'src/hashing/hashing.service';
 import { TokensService } from 'src/tokens/tokens.service';
@@ -14,7 +14,7 @@ export class SignInService {
     private readonly tokensService: TokensService,
   ) {}
 
-  async signIn(signInDto: SignInDto, res: Response) {
+  async signIn(signInDto: SignInDto, res: Response, req?: Request) {
     const user = await this.userService.findByEmail(signInDto.email);
 
     if (!user)
@@ -34,6 +34,10 @@ export class SignInService {
       user,
       res,
       AUTH_MESSAGES.SIGN_IN_SUCCESS,
+      {
+        userAgent: req?.headers['user-agent'] ?? null,
+        ipAddress: req?.ip ?? null,
+      },
     );
   }
 }

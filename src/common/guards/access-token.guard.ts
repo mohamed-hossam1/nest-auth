@@ -12,8 +12,9 @@ import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { AuthUser } from 'src/common/types/auth-user.type';
 
 type JwtPayload = {
+  sub?: string;
   email: string;
-  name: string;
+  name: string | null;
   role: string;
 };
 

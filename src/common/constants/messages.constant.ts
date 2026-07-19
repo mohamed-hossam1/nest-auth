@@ -19,6 +19,9 @@ export const AUTH_MESSAGES = {
     'If an account exists for this email, a password reset link has been sent',
   PASSWORD_RESET_RESEND_COOLDOWN:
     'Please wait before requesting another password reset email',
+  RESET_PASSWORD_SUCCESS: 'Password has been reset successfully',
+  INVALID_RESET_TOKEN: 'Invalid or expired password reset token',
+  RESET_TOKEN_EXPIRED: 'Password reset token has expired',
 } as const;
 
 export const VALIDATION_MESSAGES = {

@@ -21,6 +21,7 @@ import { TokensService } from 'src/tokens/tokens.service';
 import { SignUpDto } from './dtos/sign-up.dto';
 import { SignInDto } from './dtos/sign-in.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
+import { ResetPasswordDto } from './dtos/reset-password.dto';
 import type { Request, Response } from 'express';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { User } from 'src/common/decorators/user.decorator';
@@ -30,6 +31,7 @@ import { SignInService } from './services/sign-in.service';
 import { VerifyEmailService } from './services/verify-email.service';
 import { LogoutService } from './services/logout.service';
 import { ForgotPasswordService } from './services/forgot-password.service';
+import { ResetPasswordService } from './services/reset-password.service';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -40,6 +42,7 @@ export class AuthController {
     private readonly verifyEmailService: VerifyEmailService,
     private readonly logoutService: LogoutService,
     private readonly forgotPasswordService: ForgotPasswordService,
+    private readonly resetPasswordService: ResetPasswordService,
     private readonly tokensService: TokensService,
   ) {}
 
@@ -54,9 +57,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Sign in with email and password' })
   signIn(
     @Body() signInDto: SignInDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.signInService.signIn(signInDto, res);
+    return this.signInService.signIn(signInDto, res, req);
   }
 
   @Get('verify-email')
@@ -89,9 +93,23 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(AccessTokenGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Logout and invalidate refresh token' })
-  logout(@User() user: AuthUser, @Res({ passthrough: true }) res: Response) {
-    return this.logoutService.logout(user.id, res);
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({ summary: 'Logout and revoke the current refresh session' })
+  logout(
+    @User() user: AuthUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.logoutService.logout(user.id, res, req.cookies?.refresh_token);
+  }
+
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout and revoke all refresh sessions' })
+  logoutAll(@User() user: AuthUser, @Res({ passthrough: true }) res: Response) {
+    return this.logoutService.logoutAll(user.id, res);
   }
 
   @Post('forgot-password')
@@ -99,5 +117,12 @@ export class AuthController {
   @ApiOperation({ summary: 'Request a password reset email' })
   forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.forgotPasswordService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password using a reset token' })
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.resetPasswordService.resetPassword(resetPasswordDto);
   }
 }
