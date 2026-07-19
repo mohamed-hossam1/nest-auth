@@ -5,7 +5,6 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  Query,
   Req,
   Res,
   UseGuards,
@@ -14,7 +13,6 @@ import {
   ApiBearerAuth,
   ApiCookieAuth,
   ApiOperation,
-  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { TokensService } from 'src/tokens/tokens.service';
@@ -22,6 +20,7 @@ import { SignUpDto } from './dtos/sign-up.dto';
 import { SignInDto } from './dtos/sign-in.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { VerifyEmailDto } from './dtos/verify-email.dto';
 import type { Request, Response } from 'express';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { User } from 'src/common/decorators/user.decorator';
@@ -63,14 +62,18 @@ export class AuthController {
     return this.signInService.signIn(signInDto, res, req);
   }
 
-  @Get('verify-email')
-  @ApiOperation({ summary: 'Verify email address and auto sign in' })
-  @ApiQuery({ name: 'token', required: true, type: String })
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify email address and auto sign in',
+    description:
+      'Accepts the verification token from the email link. Must be POST so link scanners cannot consume the one-time token.',
+  })
   verifyEmail(
-    @Query('token') token: string,
+    @Body() verifyEmailDto: VerifyEmailDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.verifyEmailService.verifyEmail(token, res);
+    return this.verifyEmailService.verifyEmail(verifyEmailDto.token, res);
   }
 
   @Post('refresh')

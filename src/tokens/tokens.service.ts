@@ -3,9 +3,9 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { compareSha256, hashSha256 } from 'src/common/utils/sha256.util';
 import { db } from 'src/db';
 import { UserWithRole } from 'src/db/schema';
-import { HashingService } from 'src/hashing/hashing.service';
 import { UsersService } from 'src/users/users.service';
 import { generateRandomToken } from 'src/auth/utils/token.util';
 
@@ -32,7 +32,6 @@ export class TokensService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
-    private readonly hashingService: HashingService,
   ) {}
 
   private getRefreshTokenTtlMs(): number {
@@ -116,9 +115,7 @@ export class TokensService {
     meta: SessionMeta = {},
   ) {
     const expiresAt = new Date(Date.now() + this.getRefreshTokenTtlMs());
-    const placeholderHash = await this.hashingService.hash(
-      generateRandomToken(),
-    );
+    const placeholderHash = hashSha256(generateRandomToken());
 
     const result = await db.transaction(async (tx) => {
       const session = await this.usersService.createRefreshSession(
@@ -135,7 +132,7 @@ export class TokensService {
 
       const refreshToken = await this.generateRefreshToken(user, session.id);
       const accessToken = await this.generateAccessToken(user);
-      const refreshTokenHash = await this.hashingService.hash(refreshToken);
+      const refreshTokenHash = hashSha256(refreshToken);
 
       await this.usersService.updateRefreshSession(
         session.id,
@@ -193,10 +190,7 @@ export class TokensService {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
-    const isValid = await this.hashingService.compare(
-      refreshToken,
-      session.tokenHash,
-    );
+    const isValid = compareSha256(refreshToken, session.tokenHash);
     if (!isValid) {
       await this.usersService.revokeRefreshSession(session.id);
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
@@ -212,7 +206,7 @@ export class TokensService {
     const tokens = await db.transaction(async (tx) => {
       const newRefreshToken = await this.generateRefreshToken(user, session.id);
       const accessToken = await this.generateAccessToken(user);
-      const tokenHash = await this.hashingService.hash(newRefreshToken);
+      const tokenHash = hashSha256(newRefreshToken);
 
       await this.usersService.updateRefreshSession(
         session.id,

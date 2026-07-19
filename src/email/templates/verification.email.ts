@@ -12,8 +12,9 @@ export class VerificationEmail implements Email {
     const greeting = name ? `Welcome ${name}!` : 'Welcome!';
     this.html = `
       <h2>${greeting} Please verify your email</h2>
-      <p>Click the link below to verify your email address. This link expires in 24 hours.</p>
-      <a href="${verificationLink}">Verify Email</a>
+      <p>Open the link below to continue verification. This link expires in 24 hours.</p>
+      <p>Your email is verified only after you confirm on that page — opening or scanning the link alone does not complete verification.</p>
+      <a href="${verificationLink}">Continue to Verify Email</a>
       <p>If you didn't create an account, you can safely ignore this email.</p>
     `;
   }
