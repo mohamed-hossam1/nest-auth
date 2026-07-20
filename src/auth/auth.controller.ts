@@ -12,6 +12,7 @@ import {
 import {
   ApiBearerAuth,
   ApiCookieAuth,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -21,6 +22,8 @@ import { SignInDto } from './dtos/sign-in.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { VerifyEmailDto } from './dtos/verify-email.dto';
+import { RevokeSessionDto } from './dtos/revoke-session.dto';
+import { SessionsListResponseDto } from './dtos/session-response.dto';
 import type { Request, Response } from 'express';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { User } from 'src/common/decorators/user.decorator';
@@ -29,6 +32,7 @@ import { SignUpService } from './services/sign-up.service';
 import { SignInService } from './services/sign-in.service';
 import { VerifyEmailService } from './services/verify-email.service';
 import { LogoutService } from './services/logout.service';
+import { SessionsService } from './services/sessions.service';
 import { ForgotPasswordService } from './services/forgot-password.service';
 import { ResetPasswordService } from './services/reset-password.service';
 
@@ -40,6 +44,7 @@ export class AuthController {
     private readonly signInService: SignInService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly logoutService: LogoutService,
+    private readonly sessionsService: SessionsService,
     private readonly forgotPasswordService: ForgotPasswordService,
     private readonly resetPasswordService: ResetPasswordService,
     private readonly tokensService: TokensService,
@@ -92,6 +97,65 @@ export class AuthController {
     return { user };
   }
 
+  @Get('sessions')
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({
+    summary: 'List active refresh sessions',
+    description:
+      'Returns all active (non-revoked, non-expired) refresh sessions for the authenticated user.',
+  })
+  @ApiOkResponse({ type: SessionsListResponseDto })
+  listSessions(@User() user: AuthUser, @Req() req: Request) {
+    return this.sessionsService.listSessions(
+      user.id,
+      req.cookies?.refresh_token,
+    );
+  }
+
+  @Post('sessions/revoke')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({
+    summary: 'Revoke a specific refresh session',
+    description:
+      'Revokes a single refresh session owned by the authenticated user. Clears the refresh cookie when the current session is revoked.',
+  })
+  revokeSession(
+    @User() user: AuthUser,
+    @Body() revokeSessionDto: RevokeSessionDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.sessionsService.revokeSession(
+      user.id,
+      revokeSessionDto.sessionId,
+      res,
+      req.cookies?.refresh_token,
+    );
+  }
+
+  @Post('sessions/revoke-all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({
+    summary:
+      'Revoke all other active refresh sessions for the authenticated user.',
+    description:
+      'Revokes every active refresh session for the authenticated user except the current session associated with the request. The current session remains active and no new refresh token is issued.',
+  })
+  revokeAllOtherSessions(@User() user: AuthUser, @Req() req: Request) {
+    return this.sessionsService.revokeAllOtherSessions(
+      user.id,
+      req.cookies?.refresh_token,
+    );
+  }
+
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AccessTokenGuard)
@@ -104,15 +168,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.logoutService.logout(user.id, res, req.cookies?.refresh_token);
-  }
-
-  @Post('logout-all')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(AccessTokenGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Logout and revoke all refresh sessions' })
-  logoutAll(@User() user: AuthUser, @Res({ passthrough: true }) res: Response) {
-    return this.logoutService.logoutAll(user.id, res);
   }
 
   @Post('forgot-password')

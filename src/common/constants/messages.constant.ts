@@ -20,6 +20,9 @@ export const AUTH_MESSAGES = {
   RESET_PASSWORD_SUCCESS: 'Password has been reset successfully',
   INVALID_RESET_TOKEN: 'Invalid or expired password reset token',
   RESET_TOKEN_EXPIRED: 'Password reset token has expired',
+  SESSION_REVOKED_SUCCESS: 'Session revoked successfully',
+  SESSIONS_REVOKED_OTHERS_SUCCESS: 'All other sessions revoked successfully',
+  SESSION_NOT_FOUND: 'Session not found',
 } as const;
 
 export const VALIDATION_MESSAGES = {

@@ -138,8 +138,6 @@ export class SignUpService {
     const verificationEmail = new VerificationEmail(
       email,
       name,
-      // Frontend page reads the token and POSTs it to /api/auth/verify-email
-      // (GET must not perform verification — email scanners prefetch links).
       `${this.configService.get<string>('APP_URL')}/verify-email?token=${encodeURIComponent(verifyToken)}`,
     );
     void this.emailService.send(verificationEmail).catch(() => undefined);

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, ne } from 'drizzle-orm';
 import { normalizeEmail } from 'src/common/utils/email.util';
 import { db, type DbTransaction } from 'src/db';
 import {
@@ -327,6 +327,43 @@ export class UsersService {
     return this.updateRefreshSession(id, { revokedAt: new Date() }, executor);
   }
 
+  async findActiveRefreshSessionsByUserId(
+    userId: string,
+    executor: DbExecutor = db,
+  ): Promise<RefreshSession[]> {
+    return executor
+      .select()
+      .from(refreshSessions)
+      .where(
+        and(
+          eq(refreshSessions.userId, userId),
+          isNull(refreshSessions.revokedAt),
+          gt(refreshSessions.expiresAt, new Date()),
+        ),
+      )
+      .orderBy(desc(refreshSessions.updatedAt));
+  }
+
+  async findActiveRefreshSessionForUser(
+    sessionId: string,
+    userId: string,
+    executor: DbExecutor = db,
+  ): Promise<RefreshSession | null> {
+    const [session] = await executor
+      .select()
+      .from(refreshSessions)
+      .where(
+        and(
+          eq(refreshSessions.id, sessionId),
+          eq(refreshSessions.userId, userId),
+          isNull(refreshSessions.revokedAt),
+        ),
+      )
+      .limit(1);
+
+    return session ?? null;
+  }
+
   async revokeAllRefreshSessions(userId: string, executor: DbExecutor = db) {
     return executor
       .update(refreshSessions)
@@ -338,6 +375,26 @@ export class UsersService {
         and(
           eq(refreshSessions.userId, userId),
           isNull(refreshSessions.revokedAt),
+        ),
+      );
+  }
+
+  async revokeAllRefreshSessionsExcept(
+    userId: string,
+    exceptSessionId: string,
+    executor: DbExecutor = db,
+  ) {
+    return executor
+      .update(refreshSessions)
+      .set({
+        revokedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(refreshSessions.userId, userId),
+          isNull(refreshSessions.revokedAt),
+          ne(refreshSessions.id, exceptSessionId),
         ),
       );
   }

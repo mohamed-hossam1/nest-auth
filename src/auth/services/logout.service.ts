@@ -13,11 +13,4 @@ export class LogoutService {
 
     return { message: AUTH_MESSAGES.LOGOUT_SUCCESS };
   }
-
-  async logoutAll(userId: string, res: Response) {
-    await this.tokensService.revokeAllSessions(userId);
-    this.tokensService.clearRefreshTokenCookie(res);
-
-    return { message: AUTH_MESSAGES.LOGOUT_SUCCESS };
-  }
 }

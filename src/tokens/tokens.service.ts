@@ -229,12 +229,12 @@ export class TokensService {
     };
   }
 
-  async revokeCurrentSession(
+  async getSessionIdFromRefreshToken(
     refreshToken: string | undefined,
-    userId: string,
-  ): Promise<void> {
+    userId?: string,
+  ): Promise<string | null> {
     if (!refreshToken) {
-      return;
+      return null;
     }
 
     try {
@@ -246,11 +246,31 @@ export class TokensService {
         },
       );
 
-      if (payload.sid && payload.sub === userId) {
-        await this.usersService.revokeRefreshSession(payload.sid);
+      if (!payload.sid) {
+        return null;
       }
+
+      if (userId && payload.sub !== userId) {
+        return null;
+      }
+
+      return payload.sid;
     } catch {
-      // Invalid cookie — nothing to revoke for this session.
+      return null;
+    }
+  }
+
+  async revokeCurrentSession(
+    refreshToken: string | undefined,
+    userId: string,
+  ): Promise<void> {
+    const sessionId = await this.getSessionIdFromRefreshToken(
+      refreshToken,
+      userId,
+    );
+
+    if (sessionId) {
+      await this.usersService.revokeRefreshSession(sessionId);
     }
   }
 

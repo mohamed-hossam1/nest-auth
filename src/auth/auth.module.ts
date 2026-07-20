@@ -10,6 +10,7 @@ import { SignUpService } from './services/sign-up.service';
 import { SignInService } from './services/sign-in.service';
 import { VerifyEmailService } from './services/verify-email.service';
 import { LogoutService } from './services/logout.service';
+import { SessionsService } from './services/sessions.service';
 import { ForgotPasswordService } from './services/forgot-password.service';
 import { ResetPasswordService } from './services/reset-password.service';
 
@@ -27,6 +28,7 @@ import { ResetPasswordService } from './services/reset-password.service';
     SignInService,
     VerifyEmailService,
     LogoutService,
+    SessionsService,
     ForgotPasswordService,
     ResetPasswordService,
     AccessTokenGuard,
