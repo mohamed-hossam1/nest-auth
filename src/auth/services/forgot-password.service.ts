@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AUTH_CONFIG } from 'src/common/constants/auth.constant';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
@@ -20,20 +20,19 @@ export class ForgotPasswordService {
   ) {}
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const success = { message: AUTH_MESSAGES.FORGOT_PASSWORD_SUCCESS };
+
     const user = await this.userService.findByEmail(forgotPasswordDto.email);
 
     if (!user || !user.isVerified) {
-      return { message: AUTH_MESSAGES.FORGOT_PASSWORD_SUCCESS };
+      return success;
     }
 
     const passwordResetToken =
       await this.userService.findPasswordResetTokenByUserId(user.id);
 
     if (!this.canResendPasswordReset(passwordResetToken?.expiresAt ?? null)) {
-      throw new HttpException(
-        AUTH_MESSAGES.PASSWORD_RESET_RESEND_COOLDOWN,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      return success;
     }
 
     const secret = generateRandomToken();
@@ -54,7 +53,7 @@ export class ForgotPasswordService {
     const rawToken = formatToken(token.id, secret);
     this.sendPasswordResetEmail(user.email, user.name, rawToken);
 
-    return { message: AUTH_MESSAGES.FORGOT_PASSWORD_SUCCESS };
+    return success;
   }
 
   private canResendPasswordReset(expiresAt: Date | string | null): boolean {

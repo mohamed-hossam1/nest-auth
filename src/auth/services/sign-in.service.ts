@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { AUTH_CONFIG } from 'src/common/constants/auth.constant';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { HashingService } from 'src/hashing/hashing.service';
 import { TokensService } from 'src/tokens/tokens.service';
@@ -17,18 +18,18 @@ export class SignInService {
   async signIn(signInDto: SignInDto, res: Response, req?: Request) {
     const user = await this.userService.findByEmail(signInDto.email);
 
-    if (!user)
-      throw new UnauthorizedException(AUTH_MESSAGES.INVALID_CREDENTIALS);
-    if (!user.isVerified)
-      throw new UnauthorizedException(AUTH_MESSAGES.EMAIL_NOT_VERIFIED);
-
-    const password = await this.hashingService.compare(
+    const passwordValid = await this.hashingService.compare(
       signInDto.password,
-      user.passwordHash,
+      user?.passwordHash ?? AUTH_CONFIG.DUMMY_PASSWORD_HASH,
     );
 
-    if (!password)
+    if (!user || !passwordValid) {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_CREDENTIALS);
+    }
+
+    if (!user.isVerified) {
+      throw new UnauthorizedException(AUTH_MESSAGES.EMAIL_NOT_VERIFIED);
+    }
 
     return this.tokensService.issueAuthSession(
       user,

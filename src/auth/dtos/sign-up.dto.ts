@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { SWAGGER_EXAMPLES } from 'src/common/constants/examples.constant';
 import { VALIDATION_MESSAGES } from 'src/common/constants/messages.constant';
 
@@ -7,9 +13,11 @@ export class SignUpDto {
   @ApiPropertyOptional({
     example: SWAGGER_EXAMPLES.name,
     required: false,
+    maxLength: 100,
   })
   @IsOptional()
   @IsString()
+  @MaxLength(100, { message: VALIDATION_MESSAGES.NAME_MAX_LENGTH })
   name?: string;
 
   @ApiProperty({
