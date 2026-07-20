@@ -73,11 +73,25 @@ export class SignUpService {
     }
   }
 
+  async resendVerificationEmail(email: string) {
+    const user = await this.userService.findByEmail(email);
+
+    if (!user || user.isVerified) {
+      return { message: AUTH_MESSAGES.VERIFICATION_EMAIL_SENT };
+    }
+
+    return this.sendVerificationEmailForUser(user);
+  }
+
   private async handleExistingSignUp(user: UserWithRole) {
     if (user.isVerified) {
       throw new ConflictException(AUTH_MESSAGES.EMAIL_ALREADY_EXISTS);
     }
 
+    return this.sendVerificationEmailForUser(user);
+  }
+
+  private async sendVerificationEmailForUser(user: UserWithRole) {
     const verificationToken =
       await this.userService.findEmailVerificationTokenByUserId(user.id);
 
@@ -94,7 +108,7 @@ export class SignUpService {
 
     this.sendVerificationEmail(user.email, user.name, rawToken);
 
-    return { message: AUTH_MESSAGES.SIGN_UP_SUCCESS };
+    return { message: AUTH_MESSAGES.VERIFICATION_EMAIL_SENT };
   }
 
   private async issueVerificationToken(

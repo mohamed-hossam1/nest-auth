@@ -22,6 +22,7 @@ import { SignInDto } from './dtos/sign-in.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { VerifyEmailDto } from './dtos/verify-email.dto';
+import { ResendVerificationEmailDto } from './dtos/resend-verification-email.dto';
 import { RevokeSessionDto } from './dtos/revoke-session.dto';
 import { SessionsListResponseDto } from './dtos/session-response.dto';
 import type { Request, Response } from 'express';
@@ -79,6 +80,21 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.verifyEmailService.verifyEmail(verifyEmailDto.token, res);
+  }
+
+  @Post('resend-verification-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resend a verification email',
+    description:
+      'Sends a new verification email for an existing unverified account. Does not create a new account.',
+  })
+  resendVerificationEmail(
+    @Body() resendVerificationEmailDto: ResendVerificationEmailDto,
+  ) {
+    return this.signUpService.resendVerificationEmail(
+      resendVerificationEmailDto.email,
+    );
   }
 
   @Post('refresh')
