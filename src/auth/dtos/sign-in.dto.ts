@@ -1,14 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
+import { NormalizedEmail } from 'src/common/decorators/normalized-email.decorator';
 import { SWAGGER_EXAMPLES } from 'src/common/constants/examples.constant';
 import { VALIDATION_MESSAGES } from 'src/common/constants/messages.constant';
 
 export class SignInDto {
-  @ApiProperty({
-    example: SWAGGER_EXAMPLES.email,
-    required: true,
-  })
-  @IsEmail()
+  @NormalizedEmail()
   email: string;
 
   @ApiProperty({

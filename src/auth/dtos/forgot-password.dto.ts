@@ -1,12 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail } from 'class-validator';
-import { SWAGGER_EXAMPLES } from 'src/common/constants/examples.constant';
+import { NormalizedEmail } from 'src/common/decorators/normalized-email.decorator';
 
 export class ForgotPasswordDto {
-  @ApiProperty({
-    example: SWAGGER_EXAMPLES.email,
-    required: true,
-  })
-  @IsEmail()
+  @NormalizedEmail()
   email: string;
 }

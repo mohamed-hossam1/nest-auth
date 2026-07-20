@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
+import { normalizeEmail } from 'src/common/utils/email.util';
 import { db, type DbTransaction } from 'src/db';
 import {
   emailVerificationTokens,
@@ -59,7 +60,10 @@ export class UsersService {
     email: string,
     executor: DbExecutor = db,
   ): Promise<UserWithRole | null> {
-    return this.selectUserWithRole(executor, eq(users.email, email));
+    return this.selectUserWithRole(
+      executor,
+      eq(users.email, normalizeEmail(email)),
+    );
   }
 
   async findById(
@@ -100,7 +104,13 @@ export class UsersService {
     data: NewUser,
     executor: DbExecutor = db,
   ): Promise<UserWithRole> {
-    const [user] = await executor.insert(users).values(data).returning();
+    const [user] = await executor
+      .insert(users)
+      .values({
+        ...data,
+        email: normalizeEmail(data.email),
+      })
+      .returning();
     const withRole = await this.findById(user.id, executor);
 
     if (!withRole) {
@@ -115,10 +125,15 @@ export class UsersService {
     data: Partial<NewUser>,
     executor: DbExecutor = db,
   ): Promise<UserWithRole | null> {
+    const patch =
+      data.email !== undefined
+        ? { ...data, email: normalizeEmail(data.email) }
+        : data;
+
     const [user] = await executor
       .update(users)
       .set({
-        ...data,
+        ...patch,
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
