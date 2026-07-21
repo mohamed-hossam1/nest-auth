@@ -3,11 +3,6 @@ import * as schema from './schema';
 
 export const relations = defineRelations(schema, (r) => ({
   users: {
-    role: r.one.roles({
-      from: r.users.roleId,
-      to: r.roles.id,
-      optional: false,
-    }),
     emailVerificationToken: r.one.emailVerificationTokens({
       from: r.users.id,
       to: r.emailVerificationTokens.userId,
@@ -19,12 +14,6 @@ export const relations = defineRelations(schema, (r) => ({
     refreshSessions: r.many.refreshSessions({
       from: r.users.id,
       to: r.refreshSessions.userId,
-    }),
-  },
-  roles: {
-    users: r.many.users({
-      from: r.roles.id,
-      to: r.users.roleId,
     }),
   },
   emailVerificationTokens: {

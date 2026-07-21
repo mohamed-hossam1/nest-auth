@@ -5,6 +5,7 @@ import {
   boolean,
   timestamp,
   index,
+  pgEnum,
 } from 'drizzle-orm/pg-core';
 
 const timestamps = {
@@ -16,10 +17,9 @@ const timestamps = {
     .$onUpdate(() => new Date()),
 };
 
-export const roles = pgTable('roles', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull().unique(),
-});
+export const userRoleEnum = pgEnum('user_role', ['user', 'admin']);
+
+export type UserRole = (typeof userRoleEnum.enumValues)[number];
 
 export const users = pgTable(
   'users',
@@ -28,13 +28,11 @@ export const users = pgTable(
     email: text('email').notNull().unique(),
     passwordHash: text('password_hash').notNull(),
     name: text('name'),
-    roleId: uuid('role_id')
-      .notNull()
-      .references(() => roles.id),
+    role: userRoleEnum('role').notNull().default('user'),
     isVerified: boolean('is_verified').notNull().default(false),
     ...timestamps,
   },
-  (table) => [index('users_role_id_idx').on(table.roleId)],
+  (table) => [index('users_role_idx').on(table.role)],
 );
 
 export const emailVerificationTokens = pgTable(
@@ -92,11 +90,11 @@ export const refreshSessions = pgTable(
   ],
 );
 
-export type Role = typeof roles.$inferSelect;
-export type NewRole = typeof roles.$inferInsert;
-
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+/** Alias kept for auth layer readability; role lives on the user row. */
+export type UserWithRole = User;
 
 export type EmailVerificationToken =
   typeof emailVerificationTokens.$inferSelect;
@@ -108,8 +106,3 @@ export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 
 export type RefreshSession = typeof refreshSessions.$inferSelect;
 export type NewRefreshSession = typeof refreshSessions.$inferInsert;
-
-/** User row with role name resolved for auth responses and JWT payloads. */
-export type UserWithRole = User & {
-  role: string;
-};

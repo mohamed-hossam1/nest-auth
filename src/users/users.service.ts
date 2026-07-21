@@ -7,8 +7,6 @@ import {
   NewUser,
   passwordResetTokens,
   refreshSessions,
-  roles,
-  User,
   users,
   UserWithRole,
   type NewEmailVerificationToken,
@@ -21,83 +19,35 @@ type DbExecutor = typeof db | DbTransaction;
 
 @Injectable()
 export class UsersService {
-  private mapUserWithRole(
-    user: User,
-    roleName: string | null,
-  ): UserWithRole | null {
-    if (!user || !roleName) {
-      return null;
-    }
-
-    return {
-      ...user,
-      role: roleName,
-    };
-  }
-
-  private async selectUserWithRole(
+  private async selectUser(
     executor: DbExecutor,
     whereClause: ReturnType<typeof eq>,
   ): Promise<UserWithRole | null> {
-    const [row] = await executor
-      .select({
-        user: users,
-        roleName: roles.name,
-      })
+    const [user] = await executor
+      .select()
       .from(users)
-      .innerJoin(roles, eq(users.roleId, roles.id))
       .where(whereClause)
       .limit(1);
 
-    if (!row) {
-      return null;
-    }
-
-    return this.mapUserWithRole(row.user, row.roleName);
+    return user ?? null;
   }
 
   async findByEmail(
     email: string,
     executor: DbExecutor = db,
   ): Promise<UserWithRole | null> {
-    return this.selectUserWithRole(
-      executor,
-      eq(users.email, normalizeEmail(email)),
-    );
+    return this.selectUser(executor, eq(users.email, normalizeEmail(email)));
   }
 
   async findById(
     id: string,
     executor: DbExecutor = db,
   ): Promise<UserWithRole | null> {
-    return this.selectUserWithRole(executor, eq(users.id, id));
+    return this.selectUser(executor, eq(users.id, id));
   }
 
   async findAll(): Promise<UserWithRole[]> {
-    const rows = await db
-      .select({
-        user: users,
-        roleName: roles.name,
-      })
-      .from(users)
-      .innerJoin(roles, eq(users.roleId, roles.id));
-
-    return rows
-      .map((row) => this.mapUserWithRole(row.user, row.roleName))
-      .filter((user): user is UserWithRole => user !== null);
-  }
-
-  async findRoleIdByName(
-    name: string,
-    executor: DbExecutor = db,
-  ): Promise<string | null> {
-    const [role] = await executor
-      .select({ id: roles.id })
-      .from(roles)
-      .where(eq(roles.name, name))
-      .limit(1);
-
-    return role?.id ?? null;
+    return db.select().from(users);
   }
 
   async create(
@@ -111,13 +61,12 @@ export class UsersService {
         email: normalizeEmail(data.email),
       })
       .returning();
-    const withRole = await this.findById(user.id, executor);
 
-    if (!withRole) {
-      throw new Error('Failed to load created user with role');
+    if (!user) {
+      throw new Error('Failed to create user');
     }
 
-    return withRole;
+    return user;
   }
 
   async update(
@@ -139,11 +88,7 @@ export class UsersService {
       .where(eq(users.id, id))
       .returning();
 
-    if (!user) {
-      return null;
-    }
-
-    return this.findById(user.id, executor);
+    return user ?? null;
   }
 
   async delete(id: string, executor: DbExecutor = db) {
@@ -155,11 +100,9 @@ export class UsersService {
       .select({
         token: emailVerificationTokens,
         user: users,
-        roleName: roles.name,
       })
       .from(emailVerificationTokens)
       .innerJoin(users, eq(emailVerificationTokens.userId, users.id))
-      .innerJoin(roles, eq(users.roleId, roles.id))
       .where(eq(emailVerificationTokens.id, id))
       .limit(1);
 
@@ -167,12 +110,7 @@ export class UsersService {
       return null;
     }
 
-    const user = this.mapUserWithRole(row.user, row.roleName);
-    if (!user) {
-      return null;
-    }
-
-    return { token: row.token, user };
+    return { token: row.token, user: row.user };
   }
 
   async findEmailVerificationTokenByUserId(
@@ -222,11 +160,9 @@ export class UsersService {
       .select({
         token: passwordResetTokens,
         user: users,
-        roleName: roles.name,
       })
       .from(passwordResetTokens)
       .innerJoin(users, eq(passwordResetTokens.userId, users.id))
-      .innerJoin(roles, eq(users.roleId, roles.id))
       .where(eq(passwordResetTokens.id, id))
       .limit(1);
 
@@ -234,12 +170,7 @@ export class UsersService {
       return null;
     }
 
-    const user = this.mapUserWithRole(row.user, row.roleName);
-    if (!user) {
-      return null;
-    }
-
-    return { token: row.token, user };
+    return { token: row.token, user: row.user };
   }
 
   async findPasswordResetTokenByUserId(

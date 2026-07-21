@@ -5,7 +5,7 @@ import { Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { compareSha256, hashSha256 } from 'src/common/utils/sha256.util';
 import { db } from 'src/db';
-import { UserWithRole } from 'src/db/schema';
+import { UserWithRole, type UserRole } from 'src/db/schema';
 import { UsersService } from 'src/users/users.service';
 import { generateRandomToken } from 'src/auth/utils/token.util';
 
@@ -13,7 +13,7 @@ export type JwtPayload = {
   sub: string;
   email: string;
   name: string | null;
-  role: string;
+  role: UserRole;
 };
 
 type RefreshJwtPayload = JwtPayload & {

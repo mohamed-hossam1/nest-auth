@@ -10,12 +10,13 @@ import type { Request } from 'express';
 import { UsersService } from 'src/users/users.service';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { AuthUser } from 'src/common/types/auth-user.type';
+import type { UserRole } from 'src/db/schema';
 
 type JwtPayload = {
   sub?: string;
   email: string;
   name: string | null;
-  role: string;
+  role: UserRole;
 };
 
 type RequestWithUser = Request & { user?: AuthUser };

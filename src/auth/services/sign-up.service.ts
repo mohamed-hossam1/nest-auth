@@ -36,17 +36,12 @@ export class SignUpService {
 
     try {
       const { user, rawToken } = await db.transaction(async (tx) => {
-        const roleId = await this.userService.findRoleIdByName('user', tx);
-        if (!roleId) {
-          throw new Error('Default role "user" is not seeded');
-        }
-
         const created = await this.userService.create(
           {
             name: signUpDto.name ?? null,
             email: signUpDto.email,
             passwordHash,
-            roleId,
+            role: 'user',
           },
           tx,
         );
