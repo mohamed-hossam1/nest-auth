@@ -1,6 +1,7 @@
 import {
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -16,18 +17,23 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { Roles } from 'src/common/decorators/roles.decorator';
 import { User } from 'src/common/decorators/user.decorator';
 import { AccessTokenGuard } from 'src/common/guards/access-token.guard';
-import { RolesGuard } from 'src/common/guards/roles.guard';
 import type { AuthUser } from 'src/common/types/auth-user.type';
-import { Roles as UserRoles } from 'src/db/schema';
 import { DeleteUserService } from './services/delete-user.service';
 
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly deleteUserService: DeleteUserService) {}
+
+  @Get('me')
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current authenticated user profile' })
+  me(@User() user: AuthUser) {
+    return { user };
+  }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)

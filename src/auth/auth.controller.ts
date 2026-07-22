@@ -108,14 +108,6 @@ export class AuthController {
     return this.tokensService.refreshToken(req.cookies?.refresh_token, res);
   }
 
-  @Get('me')
-  @UseGuards(AccessTokenGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get the authenticated user' })
-  me(@User() user: AuthUser) {
-    return { user };
-  }
-
   @Get('sessions')
   @UseGuards(AccessTokenGuard)
   @ApiBearerAuth()

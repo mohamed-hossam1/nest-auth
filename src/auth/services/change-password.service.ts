@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { db } from 'src/db';
 import { HashingService } from 'src/hashing/hashing.service';
 import { UsersService } from 'src/users/users.service';
 import { ChangePasswordDto } from '../dtos/change-password.dto';
@@ -47,7 +48,11 @@ export class ChangePasswordService {
       changePasswordDto.newPassword,
     );
 
-    await this.userService.update(existingUser.id, { passwordHash });
+    await db.transaction(async (tx) => {
+      await this.userService.update(existingUser.id, { passwordHash }, tx);
+      await this.userService.revokeAllRefreshSessions(existingUser.id, tx);
+    });
+
     return { message: AUTH_MESSAGES.CHANGE_PASSWORD_SUCCESS };
   }
 }
