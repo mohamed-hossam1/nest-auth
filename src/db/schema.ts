@@ -21,6 +21,11 @@ export const userRoleEnum = pgEnum('user_role', ['user', 'admin']);
 
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 
+export const Roles = {
+  USER: 'user',
+  ADMIN: 'admin',
+};
+
 export const users = pgTable(
   'users',
   {
