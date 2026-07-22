@@ -36,6 +36,8 @@ import { LogoutService } from './services/logout.service';
 import { SessionsService } from './services/sessions.service';
 import { ForgotPasswordService } from './services/forgot-password.service';
 import { ResetPasswordService } from './services/reset-password.service';
+import { ChangePasswordDto } from './dtos/change-password.dto';
+import { ChangePasswordService } from './services/change-password.service';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -49,6 +51,7 @@ export class AuthController {
     private readonly forgotPasswordService: ForgotPasswordService,
     private readonly resetPasswordService: ResetPasswordService,
     private readonly tokensService: TokensService,
+    private readonly changePasswordService: ChangePasswordService,
   ) {}
 
   @Post('sign-up')
@@ -198,5 +201,17 @@ export class AuthController {
   @ApiOperation({ summary: 'Reset password using a reset token' })
   resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.resetPasswordService.resetPassword(resetPasswordDto);
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change the authenticated user password' })
+  changePassword(
+    @User() user: AuthUser,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    return this.changePasswordService.changePassword(user, changePasswordDto);
   }
 }

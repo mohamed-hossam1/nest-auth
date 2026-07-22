@@ -25,6 +25,11 @@ export const AUTH_MESSAGES = {
   SESSION_REVOKED_SUCCESS: 'Session revoked successfully',
   SESSIONS_REVOKED_OTHERS_SUCCESS: 'All other sessions revoked successfully',
   SESSION_NOT_FOUND: 'Session not found',
+  CHANGE_PASSWORD_SUCCESS: 'Password has been changed successfully',
+  CURRENT_PASSWORD_INVALID: 'Invalid current password',
+  CURRENT_PASSWORD_AND_NEW_PASSWORD_ARE_THE_SAME:
+    'Current password and new password are the same',
+  USER_NOT_FOUND: 'User not found',
 } as const;
 
 export const VALIDATION_MESSAGES = {
