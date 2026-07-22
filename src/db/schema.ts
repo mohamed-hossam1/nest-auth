@@ -24,7 +24,7 @@ export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export const Roles = {
   USER: 'user',
   ADMIN: 'admin',
-};
+} as const satisfies Record<string, UserRole>;
 
 export const users = pgTable(
   'users',

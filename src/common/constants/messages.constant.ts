@@ -30,6 +30,8 @@ export const AUTH_MESSAGES = {
   CURRENT_PASSWORD_AND_NEW_PASSWORD_ARE_THE_SAME:
     'Current password and new password are the same',
   USER_NOT_FOUND: 'User not found',
+  USER_DELETED_SUCCESS: 'User deleted successfully',
+  FORBIDDEN: 'You do not have permission to perform this action',
 } as const;
 
 export const VALIDATION_MESSAGES = {
