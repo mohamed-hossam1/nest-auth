@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  HttpException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import type { Request } from 'express';
 import { UsersService } from 'src/users/users.service';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { AuthUser } from 'src/common/types/auth-user.type';
+import { assertUserNotBanned } from 'src/common/utils/ban.util';
 import type { UserRole } from 'src/db/schema';
 
 type JwtPayload = {
@@ -22,7 +24,7 @@ type JwtPayload = {
 type RequestWithUser = Request & { user?: AuthUser };
 
 @Injectable()
-export class AccessTokenGuard implements CanActivate {
+export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -47,6 +49,8 @@ export class AccessTokenGuard implements CanActivate {
         throw new UnauthorizedException(AUTH_MESSAGES.INVALID_ACCESS_TOKEN);
       }
 
+      assertUserNotBanned(user);
+
       request.user = {
         id: user.id,
         email: user.email,
@@ -55,7 +59,11 @@ export class AccessTokenGuard implements CanActivate {
       };
 
       return true;
-    } catch {
+    } catch (error) {
+      // Preserve intentional HTTP errors (e.g. banned → 403).
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_ACCESS_TOKEN);
     }
   }

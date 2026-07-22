@@ -33,8 +33,12 @@ export const users = pgTable(
     email: text('email').notNull().unique(),
     passwordHash: text('password_hash').notNull(),
     name: text('name'),
+    avatarUrl: text('avatar_url'),
     role: userRoleEnum('role').notNull().default('user'),
     isVerified: boolean('is_verified').notNull().default(false),
+    isBanned: boolean('is_banned').notNull().default(false),
+    bannedAt: timestamp('banned_at', { withTimezone: true }),
+    banReason: text('ban_reason'),
     ...timestamps,
   },
   (table) => [index('users_role_idx').on(table.role)],
@@ -98,7 +102,6 @@ export const refreshSessions = pgTable(
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
-/** Alias kept for auth layer readability; role lives on the user row. */
 export type UserWithRole = User;
 
 export type EmailVerificationToken =

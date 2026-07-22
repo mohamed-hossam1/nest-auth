@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
-import { AccessTokenGuard } from '../common/guards/access-token.guard';
+import { AuthGuard } from '../common/guards/auth.guard';
 import { HashingModule } from 'src/hashing/hashing.module';
 import { TokensModule } from 'src/tokens/tokens.module';
 import { UsersModule } from 'src/users/users.module';
@@ -33,7 +33,7 @@ import { ChangePasswordService } from './services/change-password.service';
     ForgotPasswordService,
     ResetPasswordService,
     ChangePasswordService,
-    AccessTokenGuard,
+    AuthGuard,
   ],
 })
 export class AuthModule {}

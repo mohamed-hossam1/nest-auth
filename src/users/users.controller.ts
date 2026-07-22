@@ -18,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { User } from 'src/common/decorators/user.decorator';
-import { AccessTokenGuard } from 'src/common/guards/access-token.guard';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 import type { AuthUser } from 'src/common/types/auth-user.type';
 import { DeleteUserService } from './services/delete-user.service';
 
@@ -28,7 +28,7 @@ export class UsersController {
   constructor(private readonly deleteUserService: DeleteUserService) {}
 
   @Get('me')
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user profile' })
   me(@User() user: AuthUser) {
@@ -37,7 +37,7 @@ export class UsersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('refresh_token')
   @ApiOperation({

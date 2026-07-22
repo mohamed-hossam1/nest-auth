@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { assertUserNotBanned } from 'src/common/utils/ban.util';
 import { compareSha256, hashSha256 } from 'src/common/utils/sha256.util';
 import { db } from 'src/db';
 import { UserWithRole, type UserRole } from 'src/db/schema';
@@ -114,6 +115,8 @@ export class TokensService {
     message: string,
     meta: SessionMeta = {},
   ) {
+    assertUserNotBanned(user);
+
     const expiresAt = new Date(Date.now() + this.getRefreshTokenTtlMs());
     const placeholderHash = hashSha256(generateRandomToken());
 
@@ -199,6 +202,12 @@ export class TokensService {
     const user = await this.usersService.findById(session.userId);
     if (!user?.isVerified) {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
+    }
+
+    if (user.isBanned) {
+      await this.usersService.revokeAllRefreshSessions(user.id);
+      this.clearRefreshTokenCookie(res);
+      assertUserNotBanned(user);
     }
 
     const expiresAt = new Date(Date.now() + this.getRefreshTokenTtlMs());

@@ -1,5 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { AccessTokenGuard } from 'src/common/guards/access-token.guard';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { TokensModule } from 'src/tokens/tokens.module';
 import { DeleteUserService } from './services/delete-user.service';
@@ -9,7 +9,7 @@ import { UsersService } from './users.service';
 @Module({
   imports: [forwardRef(() => TokensModule)],
   controllers: [UsersController],
-  providers: [UsersService, DeleteUserService, AccessTokenGuard, RolesGuard],
+  providers: [UsersService, DeleteUserService, AuthGuard, RolesGuard],
   exports: [UsersService],
 })
 export class UsersModule {}

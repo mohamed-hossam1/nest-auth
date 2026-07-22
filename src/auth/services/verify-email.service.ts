@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { assertUserNotBanned } from 'src/common/utils/ban.util';
 import { db } from 'src/db';
 import { HashingService } from 'src/hashing/hashing.service';
 import { TokensService } from 'src/tokens/tokens.service';
@@ -46,6 +47,8 @@ export class VerifyEmailService {
       await this.userService.deleteEmailVerificationToken(user.id);
       return { message: AUTH_MESSAGES.EMAIL_ALREADY_VERIFIED };
     }
+
+    assertUserNotBanned(user);
 
     if (new Date(verificationToken.expiresAt).getTime() < Date.now()) {
       throw new BadRequestException(AUTH_MESSAGES.VERIFY_TOKEN_EXPIRED);

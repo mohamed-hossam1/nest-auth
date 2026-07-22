@@ -26,7 +26,7 @@ import { ResendVerificationEmailDto } from './dtos/resend-verification-email.dto
 import { RevokeSessionDto } from './dtos/revoke-session.dto';
 import { SessionsListResponseDto } from './dtos/session-response.dto';
 import type { Request, Response } from 'express';
-import { AccessTokenGuard } from '../common/guards/access-token.guard';
+import { AuthGuard } from '../common/guards/auth.guard';
 import { User } from 'src/common/decorators/user.decorator';
 import type { AuthUser } from 'src/common/types/auth-user.type';
 import { SignUpService } from './services/sign-up.service';
@@ -109,7 +109,7 @@ export class AuthController {
   }
 
   @Get('sessions')
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('refresh_token')
   @ApiOperation({
@@ -127,7 +127,7 @@ export class AuthController {
 
   @Post('sessions/revoke')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('refresh_token')
   @ApiOperation({
@@ -151,7 +151,7 @@ export class AuthController {
 
   @Post('sessions/revoke-all')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('refresh_token')
   @ApiOperation({
@@ -169,7 +169,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('refresh_token')
   @ApiOperation({ summary: 'Logout and revoke the current refresh session' })
@@ -197,7 +197,7 @@ export class AuthController {
 
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Change the authenticated user password' })
   changePassword(
