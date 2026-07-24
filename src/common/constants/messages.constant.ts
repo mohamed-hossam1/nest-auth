@@ -30,7 +30,9 @@ export const AUTH_MESSAGES = {
   CURRENT_PASSWORD_AND_NEW_PASSWORD_ARE_THE_SAME:
     'Current password and new password are the same',
   USER_NOT_FOUND: 'User not found',
+  USER_UPDATED_SUCCESS: 'User updated successfully',
   USER_DELETED_SUCCESS: 'User deleted successfully',
+  NO_FIELDS_TO_UPDATE: 'At least one field must be provided to update',
   ACCOUNT_BANNED: 'Your account has been banned',
   FORBIDDEN: 'You do not have permission to perform this action',
 } as const;
@@ -38,4 +40,6 @@ export const AUTH_MESSAGES = {
 export const VALIDATION_MESSAGES = {
   PASSWORD_MIN_LENGTH: 'Password must be at least 6 characters long',
   NAME_MAX_LENGTH: 'Name must be at most 100 characters long',
+  AVATAR_URL_INVALID: 'Avatar URL must be a valid URL',
+  AVATAR_URL_MAX_LENGTH: 'Avatar URL must be at most 2048 characters long',
 } as const;
