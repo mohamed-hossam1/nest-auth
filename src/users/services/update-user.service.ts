@@ -17,6 +17,8 @@ export type PublicUser = {
   avatarUrl: string | null;
   role: User['role'];
   isVerified: boolean;
+  isBanned: boolean;
+  ban: { bannedAt: Date; banReason: string } | null;
 };
 
 @Injectable()
@@ -63,11 +65,15 @@ export class UpdateUserService {
 
     return {
       message: AUTH_MESSAGES.USER_UPDATED_SUCCESS,
-      user: this.toPublicUser(updated),
+      user: await this.toPublicUser(updated),
     };
   }
 
-  toPublicUser(user: User): PublicUser {
+  async toPublicUser(user: User): Promise<PublicUser> {
+    const ban = user.isBanned
+      ? await this.usersService.findBanByUserId(user.id)
+      : null;
+
     return {
       id: user.id,
       email: user.email,
@@ -75,6 +81,13 @@ export class UpdateUserService {
       avatarUrl: user.avatarUrl,
       role: user.role,
       isVerified: user.isVerified,
+      isBanned: user.isBanned,
+      ban: ban
+        ? {
+            bannedAt: ban.bannedAt,
+            banReason: ban.banReason,
+          }
+        : null,
     };
   }
 }

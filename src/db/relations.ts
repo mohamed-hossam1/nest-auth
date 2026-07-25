@@ -15,6 +15,17 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.refreshSessions.userId,
     }),
+    ban: r.one.userBans({
+      from: r.users.id,
+      to: r.userBans.userId,
+    }),
+  },
+  userBans: {
+    user: r.one.users({
+      from: r.userBans.userId,
+      to: r.users.id,
+      optional: false,
+    }),
   },
   emailVerificationTokens: {
     user: r.one.users({

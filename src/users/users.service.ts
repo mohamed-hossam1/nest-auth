@@ -7,12 +7,15 @@ import {
   NewUser,
   passwordResetTokens,
   refreshSessions,
+  userBans,
   users,
   UserWithRole,
   type NewEmailVerificationToken,
   type NewPasswordResetToken,
   type NewRefreshSession,
+  type NewUserBan,
   type RefreshSession,
+  type UserBan,
 } from 'src/db/schema';
 
 type DbExecutor = typeof db | DbTransaction;
@@ -93,6 +96,66 @@ export class UsersService {
 
   async delete(id: string, executor: DbExecutor = db) {
     return executor.delete(users).where(eq(users.id, id));
+  }
+
+  async findBanByUserId(
+    userId: string,
+    executor: DbExecutor = db,
+  ): Promise<UserBan | null> {
+    const [ban] = await executor
+      .select()
+      .from(userBans)
+      .where(eq(userBans.userId, userId))
+      .limit(1);
+
+    return ban ?? null;
+  }
+
+  async banUser(
+    userId: string,
+    banReason: string,
+    executor: DbExecutor = db,
+  ): Promise<{ user: UserWithRole; ban: UserBan }> {
+    const [ban] = await executor
+      .insert(userBans)
+      .values({
+        userId,
+        banReason,
+      } satisfies NewUserBan)
+      .returning();
+
+    const [user] = await executor
+      .update(users)
+      .set({
+        isBanned: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user || !ban) {
+      throw new Error('Failed to ban user');
+    }
+
+    return { user, ban };
+  }
+
+  async unbanUser(
+    userId: string,
+    executor: DbExecutor = db,
+  ): Promise<UserWithRole | null> {
+    await executor.delete(userBans).where(eq(userBans.userId, userId));
+
+    const [user] = await executor
+      .update(users)
+      .set({
+        isBanned: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return user ?? null;
   }
 
   async findEmailVerificationTokenById(id: string) {

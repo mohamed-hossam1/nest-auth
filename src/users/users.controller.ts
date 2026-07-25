@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -19,10 +20,15 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { Roles } from 'src/common/decorators/roles.decorator';
 import { User } from 'src/common/decorators/user.decorator';
 import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
 import type { AuthUser } from 'src/common/types/auth-user.type';
+import { UsersService } from 'src/users/users.service';
+import { BanUserDto } from './dtos/ban-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { BanUserService } from './services/ban-user.service';
 import { DeleteUserService } from './services/delete-user.service';
 import { UpdateUserService } from './services/update-user.service';
 
@@ -32,14 +38,23 @@ export class UsersController {
   constructor(
     private readonly deleteUserService: DeleteUserService,
     private readonly updateUserService: UpdateUserService,
+    private readonly banUserService: BanUserService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Get('me')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user profile' })
-  me(@User() user: AuthUser) {
-    return { user };
+  async me(@User() user: AuthUser) {
+    const fullUser = await this.usersService.findById(user.id);
+    if (!fullUser) {
+      return { user };
+    }
+
+    return {
+      user: await this.banUserService.toPublicUserProfile(fullUser),
+    };
   }
 
   @Patch('me')
@@ -98,5 +113,47 @@ export class UsersController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.deleteUserService.delete(user, id, res);
+  }
+
+  @Post(':id/ban')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Ban a user',
+    description:
+      'Admin-only. Creates a row in user_bans, sets isBanned, and revokes all of the user sessions.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the user to ban',
+    format: 'uuid',
+  })
+  ban(
+    @User() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() banUserDto: BanUserDto,
+  ) {
+    return this.banUserService.ban(user, id, banUserDto);
+  }
+
+  @Post(':id/unban')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Unban a user',
+    description:
+      'Admin-only. Deletes the user_bans row and clears the isBanned flag.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the user to unban',
+    format: 'uuid',
+  })
+  unban(@User() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.banUserService.unban(user, id);
   }
 }

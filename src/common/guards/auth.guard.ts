@@ -49,7 +49,13 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException(AUTH_MESSAGES.INVALID_ACCESS_TOKEN);
       }
 
-      assertUserNotBanned(user);
+      if (user.isBanned) {
+        const ban = await this.usersService.findBanByUserId(user.id);
+        assertUserNotBanned({
+          isBanned: true,
+          banReason: ban?.banReason,
+        });
+      }
 
       request.user = {
         id: user.id,

@@ -37,12 +37,23 @@ export const users = pgTable(
     role: userRoleEnum('role').notNull().default('user'),
     isVerified: boolean('is_verified').notNull().default(false),
     isBanned: boolean('is_banned').notNull().default(false),
-    bannedAt: timestamp('banned_at', { withTimezone: true }),
-    banReason: text('ban_reason'),
     ...timestamps,
   },
   (table) => [index('users_role_idx').on(table.role)],
 );
+
+export const userBans = pgTable('user_bans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  bannedAt: timestamp('banned_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  banReason: text('ban_reason').notNull(),
+  ...timestamps,
+});
 
 export const emailVerificationTokens = pgTable(
   'email_verification_tokens',
@@ -103,6 +114,9 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
 export type UserWithRole = User;
+
+export type UserBan = typeof userBans.$inferSelect;
+export type NewUserBan = typeof userBans.$inferInsert;
 
 export type EmailVerificationToken =
   typeof emailVerificationTokens.$inferSelect;

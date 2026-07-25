@@ -78,7 +78,6 @@ export class SessionsService {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
-    // Keep the current session active; do not issue a new refresh token.
     await this.usersService.revokeAllRefreshSessionsExcept(
       userId,
       currentSessionId,

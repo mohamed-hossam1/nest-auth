@@ -48,7 +48,13 @@ export class VerifyEmailService {
       return { message: AUTH_MESSAGES.EMAIL_ALREADY_VERIFIED };
     }
 
-    assertUserNotBanned(user);
+    if (user.isBanned) {
+      const ban = await this.userService.findBanByUserId(user.id);
+      assertUserNotBanned({
+        isBanned: true,
+        banReason: ban?.banReason,
+      });
+    }
 
     if (new Date(verificationToken.expiresAt).getTime() < Date.now()) {
       throw new BadRequestException(AUTH_MESSAGES.VERIFY_TOKEN_EXPIRED);
