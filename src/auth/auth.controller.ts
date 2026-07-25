@@ -16,7 +16,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { TokensService } from 'src/tokens/tokens.service';
+
 import { SignUpDto } from './dtos/sign-up.dto';
 import { SignInDto } from './dtos/sign-in.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
@@ -38,6 +38,7 @@ import { ForgotPasswordService } from './services/forgot-password.service';
 import { ResetPasswordService } from './services/reset-password.service';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { ChangePasswordService } from './services/change-password.service';
+import { RefreshService } from './services/refresh.service';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -50,7 +51,7 @@ export class AuthController {
     private readonly sessionsService: SessionsService,
     private readonly forgotPasswordService: ForgotPasswordService,
     private readonly resetPasswordService: ResetPasswordService,
-    private readonly tokensService: TokensService,
+    private readonly refreshService: RefreshService,
     private readonly changePasswordService: ChangePasswordService,
   ) {}
 
@@ -105,7 +106,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh access token using refresh cookie' })
   @ApiCookieAuth('refresh_token')
   refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    return this.tokensService.refreshToken(req.cookies?.refresh_token, res);
+    return this.refreshService.refresh(req.cookies?.refresh_token, res);
   }
 
   @Get('sessions')

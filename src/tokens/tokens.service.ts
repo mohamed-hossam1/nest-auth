@@ -17,7 +17,7 @@ export type JwtPayload = {
   role: UserRole;
 };
 
-type RefreshJwtPayload = JwtPayload & {
+export type RefreshJwtPayload = JwtPayload & {
   sid: string;
 };
 
@@ -35,7 +35,7 @@ export class TokensService {
     private readonly usersService: UsersService,
   ) {}
 
-  private getRefreshTokenTtlMs(): number {
+  getRefreshTokenTtlMs(): number {
     const raw =
       this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
     const match = /^(\d+)([smhd])$/.exec(raw.trim());
@@ -115,7 +115,13 @@ export class TokensService {
     message: string,
     meta: SessionMeta = {},
   ) {
-    assertUserNotBanned(user);
+    if (user.isBanned) {
+      const ban = await this.usersService.findBanByUserId(user.id);
+      assertUserNotBanned({
+        isBanned: true,
+        banReason: ban?.banReason,
+      });
+    }
 
     const expiresAt = new Date(Date.now() + this.getRefreshTokenTtlMs());
     const placeholderHash = hashSha256(generateRandomToken());
@@ -161,81 +167,6 @@ export class TokensService {
         avatarUrl: user.avatarUrl,
         role: user.role,
       },
-    };
-  }
-
-  async refreshToken(refreshToken: string | undefined, res: Response) {
-    if (!refreshToken) {
-      throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
-    }
-
-    let payload: RefreshJwtPayload;
-    try {
-      payload = await this.jwtService.verifyAsync<RefreshJwtPayload>(
-        refreshToken,
-        {
-          secret: this.configService.get('JWT_REFRESH_SECRET'),
-        },
-      );
-    } catch {
-      throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
-    }
-
-    if (!payload.sid) {
-      throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
-    }
-
-    const session = await this.usersService.findRefreshSessionById(payload.sid);
-    if (
-      !session ||
-      session.revokedAt ||
-      new Date(session.expiresAt).getTime() < Date.now()
-    ) {
-      throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
-    }
-
-    const isValid = compareSha256(refreshToken, session.tokenHash);
-    if (!isValid) {
-      await this.usersService.revokeRefreshSession(session.id);
-      throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
-    }
-
-    const user = await this.usersService.findById(session.userId);
-    if (!user?.isVerified) {
-      throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
-    }
-
-    if (user.isBanned) {
-      await this.usersService.revokeAllRefreshSessions(user.id);
-      this.clearRefreshTokenCookie(res);
-      assertUserNotBanned(user);
-    }
-
-    const expiresAt = new Date(Date.now() + this.getRefreshTokenTtlMs());
-
-    const tokens = await db.transaction(async (tx) => {
-      const newRefreshToken = await this.generateRefreshToken(user, session.id);
-      const accessToken = await this.generateAccessToken(user);
-      const tokenHash = hashSha256(newRefreshToken);
-
-      await this.usersService.updateRefreshSession(
-        session.id,
-        {
-          tokenHash,
-          expiresAt,
-          revokedAt: null,
-        },
-        tx,
-      );
-
-      return { accessToken, refreshToken: newRefreshToken };
-    });
-
-    this.setRefreshTokenToCookie(res, tokens.refreshToken);
-
-    return {
-      message: AUTH_MESSAGES.REFRESH_SUCCESS,
-      accessToken: tokens.accessToken,
     };
   }
 

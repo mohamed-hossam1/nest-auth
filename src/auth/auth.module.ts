@@ -14,6 +14,7 @@ import { SessionsService } from './services/sessions.service';
 import { ForgotPasswordService } from './services/forgot-password.service';
 import { ResetPasswordService } from './services/reset-password.service';
 import { ChangePasswordService } from './services/change-password.service';
+import { RefreshService } from './services/refresh.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ChangePasswordService } from './services/change-password.service';
     ForgotPasswordService,
     ResetPasswordService,
     ChangePasswordService,
+    RefreshService,
     AuthGuard,
   ],
 })
