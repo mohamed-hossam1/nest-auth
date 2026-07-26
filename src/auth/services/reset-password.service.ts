@@ -5,6 +5,7 @@ import { HashingService } from 'src/hashing/hashing.service';
 import { UsersService } from 'src/users/users.service';
 import { ResetPasswordDto } from '../dtos/reset-password.dto';
 import { parseToken } from '../utils/token.util';
+import { compareSha256 } from 'src/common/utils/sha256.util';
 
 @Injectable()
 export class ResetPasswordService {
@@ -26,10 +27,7 @@ export class ResetPasswordService {
 
     const { token, user } = match;
 
-    const isValidSecret = await this.hashingService.compare(
-      parsed.secret,
-      token.tokenHash,
-    );
+    const isValidSecret = compareSha256(parsed.secret, token.tokenHash);
     if (!isValidSecret) {
       throw new BadRequestException(AUTH_MESSAGES.INVALID_RESET_TOKEN);
     }

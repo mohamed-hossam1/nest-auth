@@ -98,6 +98,23 @@ export class UsersService {
     return executor.delete(users).where(eq(users.id, id));
   }
 
+  async findSessionWithUser(
+    sessionId: string,
+    executor: DbExecutor = db,
+  ): Promise<{ session: RefreshSession; user: UserWithRole } | null> {
+    const [row] = await executor
+      .select({
+        session: refreshSessions,
+        user: users,
+      })
+      .from(refreshSessions)
+      .innerJoin(users, eq(refreshSessions.userId, users.id))
+      .where(eq(refreshSessions.id, sessionId))
+      .limit(1);
+
+    return row ?? null;
+  }
+
   async findBanByUserId(
     userId: string,
     executor: DbExecutor = db,

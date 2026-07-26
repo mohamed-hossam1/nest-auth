@@ -15,6 +15,7 @@ import { HashingService } from 'src/hashing/hashing.service';
 import { UsersService } from 'src/users/users.service';
 import { SignUpDto } from '../dtos/sign-up.dto';
 import { formatToken, generateRandomToken } from '../utils/token.util';
+import { hashSha256 } from 'src/common/utils/sha256.util';
 
 @Injectable()
 export class SignUpService {
@@ -111,7 +112,7 @@ export class SignUpService {
     tx: DbTransaction,
   ): Promise<string> {
     const secret = generateRandomToken();
-    const tokenHash = await this.hashingService.hash(secret);
+    const tokenHash = hashSha256(secret);
     const expiresAt = new Date(Date.now() + AUTH_CONFIG.VERIFY_TOKEN_TTL_MS);
 
     const token = await this.userService.upsertEmailVerificationToken(

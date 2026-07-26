@@ -5,10 +5,10 @@ import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { db } from 'src/db';
 import { EmailService } from 'src/email/email.service';
 import { PasswordResetEmail } from 'src/email/templates/password-reset.email';
-import { HashingService } from 'src/hashing/hashing.service';
 import { UsersService } from 'src/users/users.service';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
 import { formatToken, generateRandomToken } from '../utils/token.util';
+import { hashSha256 } from 'src/common/utils/sha256.util';
 
 @Injectable()
 export class ForgotPasswordService {
@@ -16,7 +16,6 @@ export class ForgotPasswordService {
     private readonly userService: UsersService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
-    private readonly hashingService: HashingService,
   ) {}
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
@@ -36,7 +35,7 @@ export class ForgotPasswordService {
     }
 
     const secret = generateRandomToken();
-    const tokenHash = await this.hashingService.hash(secret);
+    const tokenHash = hashSha256(secret);
     const expiresAt = new Date(Date.now() + AUTH_CONFIG.RESET_TOKEN_TTL_MS);
 
     const token = await db.transaction(async (tx) => {

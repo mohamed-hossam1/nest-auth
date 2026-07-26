@@ -3,17 +3,16 @@ import { Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { assertUserNotBanned } from 'src/common/utils/ban.util';
 import { db } from 'src/db';
-import { HashingService } from 'src/hashing/hashing.service';
 import { TokensService } from 'src/tokens/tokens.service';
 import { UsersService } from 'src/users/users.service';
 import { parseToken } from '../utils/token.util';
+import { compareSha256 } from 'src/common/utils/sha256.util';
 
 @Injectable()
 export class VerifyEmailService {
   constructor(
     private readonly userService: UsersService,
     private readonly tokensService: TokensService,
-    private readonly hashingService: HashingService,
   ) {}
 
   async verifyEmail(token: string, res: Response) {
@@ -35,7 +34,7 @@ export class VerifyEmailService {
 
     const { token: verificationToken, user } = match;
 
-    const isValidSecret = await this.hashingService.compare(
+    const isValidSecret = compareSha256(
       parsed.secret,
       verificationToken.tokenHash,
     );

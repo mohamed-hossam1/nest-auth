@@ -39,14 +39,16 @@ export class RefreshService {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
-    const session = await this.usersService.findRefreshSessionById(payload.sid);
+    const result = await this.usersService.findSessionWithUser(payload.sid);
     if (
-      !session ||
-      session.revokedAt ||
-      new Date(session.expiresAt).getTime() < Date.now()
+      !result ||
+      result.session.revokedAt ||
+      new Date(result.session.expiresAt).getTime() < Date.now()
     ) {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
+
+    const { session, user } = result;
 
     const isValid = compareSha256(refreshToken, session.tokenHash);
     if (!isValid) {
@@ -54,8 +56,7 @@ export class RefreshService {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
-    const user = await this.usersService.findById(session.userId);
-    if (!user?.isVerified) {
+    if (!user.isVerified) {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
