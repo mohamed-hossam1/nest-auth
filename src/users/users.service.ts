@@ -10,6 +10,7 @@ import {
   userBans,
   users,
   UserWithRole,
+  type EmailVerificationToken,
   type NewEmailVerificationToken,
   type NewPasswordResetToken,
   type NewRefreshSession,
@@ -114,6 +115,29 @@ export class UsersService {
 
     return row ?? null;
   }
+  async findUserWithVerificationToken(
+    email: string,
+    executor: DbExecutor = db,
+  ): Promise<{
+    user: UserWithRole;
+    token: EmailVerificationToken | null;
+  } | null> {
+    const [row] = await executor
+      .select({
+        user: users,
+        token: emailVerificationTokens,
+      })
+      .from(users)
+      .leftJoin(
+        emailVerificationTokens,
+        eq(users.id, emailVerificationTokens.userId),
+      )
+      .where(eq(users.email, normalizeEmail(email)))
+      .limit(1);
+
+    if (!row) return null;
+    return { user: row.user, token: row.token };
+  }
 
   async findBanByUserId(
     userId: string,
@@ -180,9 +204,11 @@ export class UsersService {
       .select({
         token: emailVerificationTokens,
         user: users,
+        ban: userBans,
       })
       .from(emailVerificationTokens)
       .innerJoin(users, eq(emailVerificationTokens.userId, users.id))
+      .leftJoin(userBans, eq(users.id, userBans.userId))
       .where(eq(emailVerificationTokens.id, id))
       .limit(1);
 
@@ -190,7 +216,7 @@ export class UsersService {
       return null;
     }
 
-    return { token: row.token, user: row.user };
+    return { token: row.token, user: row.user, ban: row.ban };
   }
 
   async findEmailVerificationTokenByUserId(

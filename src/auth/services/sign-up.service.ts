@@ -1,36 +1,27 @@
-import {
-  ConflictException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AUTH_CONFIG } from 'src/common/constants/auth.constant';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
-import { db, type DbTransaction } from 'src/db';
-import { UserWithRole } from 'src/db/schema';
-import { EmailService } from 'src/email/email.service';
-import { VerificationEmail } from 'src/email/templates/verification.email';
+import { db } from 'src/db';
+import { UserWithRole, type EmailVerificationToken } from 'src/db/schema';
 import { HashingService } from 'src/hashing/hashing.service';
 import { UsersService } from 'src/users/users.service';
 import { SignUpDto } from '../dtos/sign-up.dto';
-import { formatToken, generateRandomToken } from '../utils/token.util';
-import { hashSha256 } from 'src/common/utils/sha256.util';
+import { ResendVerificationEmailService } from './resend-verification-email.service';
 
 @Injectable()
 export class SignUpService {
   constructor(
     private readonly userService: UsersService,
     private readonly hashingService: HashingService,
-    private readonly emailService: EmailService,
-    private readonly configService: ConfigService,
+    private readonly resendVerificationEmailService: ResendVerificationEmailService,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
-    const existingUser = await this.userService.findByEmail(signUpDto.email);
+    const match = await this.userService.findUserWithVerificationToken(
+      signUpDto.email,
+    );
 
-    if (existingUser) {
-      return this.handleExistingSignUp(existingUser);
+    if (match) {
+      return this.handleExistingSignUp(match.user, match.token);
     }
 
     const passwordHash = await this.hashingService.hash(signUpDto.password);
@@ -47,12 +38,20 @@ export class SignUpService {
           tx,
         );
 
-        const rawToken = await this.issueVerificationToken(created.id, tx);
+        const rawToken =
+          await this.resendVerificationEmailService.issueVerificationToken(
+            created.id,
+            tx,
+          );
 
         return { user: created, rawToken };
       });
 
-      this.sendVerificationEmail(user.email, user.name, rawToken);
+      this.resendVerificationEmailService.sendVerificationEmail(
+        user.email,
+        user.name,
+        rawToken,
+      );
 
       return { message: AUTH_MESSAGES.SIGN_UP_SUCCESS };
     } catch (error) {
@@ -60,97 +59,29 @@ export class SignUpService {
         throw error;
       }
 
-      const racedUser = await this.userService.findByEmail(signUpDto.email);
-      if (racedUser) {
-        return this.handleExistingSignUp(racedUser);
+      const raced = await this.userService.findUserWithVerificationToken(
+        signUpDto.email,
+      );
+      if (raced) {
+        return this.handleExistingSignUp(raced.user, raced.token);
       }
 
       throw new ConflictException(AUTH_MESSAGES.EMAIL_ALREADY_EXISTS);
     }
   }
 
-  async resendVerificationEmail(email: string) {
-    const user = await this.userService.findByEmail(email);
-
-    if (!user || user.isVerified) {
-      return { message: AUTH_MESSAGES.VERIFICATION_EMAIL_SENT };
-    }
-
-    return this.sendVerificationEmailForUser(user);
-  }
-
-  private async handleExistingSignUp(user: UserWithRole) {
+  private async handleExistingSignUp(
+    user: UserWithRole,
+    token: EmailVerificationToken | null,
+  ) {
     if (user.isVerified) {
       throw new ConflictException(AUTH_MESSAGES.EMAIL_ALREADY_EXISTS);
     }
 
-    return this.sendVerificationEmailForUser(user);
-  }
-
-  private async sendVerificationEmailForUser(user: UserWithRole) {
-    const verificationToken =
-      await this.userService.findEmailVerificationTokenByUserId(user.id);
-
-    if (!this.canResendVerification(verificationToken?.expiresAt ?? null)) {
-      throw new HttpException(
-        AUTH_MESSAGES.VERIFICATION_RESEND_COOLDOWN,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    const rawToken = await db.transaction(async (tx) => {
-      return this.issueVerificationToken(user.id, tx);
-    });
-
-    this.sendVerificationEmail(user.email, user.name, rawToken);
-
-    return { message: AUTH_MESSAGES.VERIFICATION_EMAIL_SENT };
-  }
-
-  private async issueVerificationToken(
-    userId: string,
-    tx: DbTransaction,
-  ): Promise<string> {
-    const secret = generateRandomToken();
-    const tokenHash = hashSha256(secret);
-    const expiresAt = new Date(Date.now() + AUTH_CONFIG.VERIFY_TOKEN_TTL_MS);
-
-    const token = await this.userService.upsertEmailVerificationToken(
-      {
-        userId,
-        tokenHash,
-        expiresAt,
-      },
-      tx,
+    return this.resendVerificationEmailService.sendVerificationEmailForUser(
+      user,
+      token,
     );
-
-    return formatToken(token.id, secret);
-  }
-
-  private canResendVerification(expiresAt: Date | string | null): boolean {
-    if (!expiresAt) {
-      return true;
-    }
-
-    const lastSentAt =
-      new Date(expiresAt).getTime() - AUTH_CONFIG.VERIFY_TOKEN_TTL_MS;
-
-    return (
-      Date.now() - lastSentAt >= AUTH_CONFIG.VERIFICATION_RESEND_COOLDOWN_MS
-    );
-  }
-
-  private sendVerificationEmail(
-    email: string,
-    name: string | null,
-    verifyToken: string,
-  ) {
-    const verificationEmail = new VerificationEmail(
-      email,
-      name,
-      `${this.configService.get<string>('APP_URL')}/verify-email?token=${encodeURIComponent(verifyToken)}`,
-    );
-    void this.emailService.send(verificationEmail).catch(() => undefined);
   }
 
   private isUniqueViolation(error: unknown): boolean {

@@ -1,14 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
-import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { randomUUID } from 'crypto';
 import { assertUserNotBanned } from 'src/common/utils/ban.util';
-import { compareSha256, hashSha256 } from 'src/common/utils/sha256.util';
-import { db } from 'src/db';
+import { hashSha256 } from 'src/common/utils/sha256.util';
 import { UserWithRole, type UserRole } from 'src/db/schema';
 import { UsersService } from 'src/users/users.service';
-import { generateRandomToken } from 'src/auth/utils/token.util';
 
 export type JwtPayload = {
   sub: string;
@@ -123,43 +121,27 @@ export class TokensService {
       });
     }
 
+    const sessionId = randomUUID();
     const expiresAt = new Date(Date.now() + this.getRefreshTokenTtlMs());
-    const placeholderHash = hashSha256(generateRandomToken());
+    const refreshToken = await this.generateRefreshToken(user, sessionId);
+    const accessToken = await this.generateAccessToken(user);
+    const refreshTokenHash = hashSha256(refreshToken);
 
-    const result = await db.transaction(async (tx) => {
-      const session = await this.usersService.createRefreshSession(
-        {
-          userId: user.id,
-          tokenHash: placeholderHash,
-          deviceName: meta.deviceName ?? null,
-          userAgent: meta.userAgent ?? null,
-          ipAddress: meta.ipAddress ?? null,
-          expiresAt,
-        },
-        tx,
-      );
-
-      const refreshToken = await this.generateRefreshToken(user, session.id);
-      const accessToken = await this.generateAccessToken(user);
-      const refreshTokenHash = hashSha256(refreshToken);
-
-      await this.usersService.updateRefreshSession(
-        session.id,
-        {
-          tokenHash: refreshTokenHash,
-          expiresAt,
-        },
-        tx,
-      );
-
-      return { accessToken, refreshToken };
+    await this.usersService.createRefreshSession({
+      id: sessionId,
+      userId: user.id,
+      tokenHash: refreshTokenHash,
+      deviceName: meta.deviceName ?? null,
+      userAgent: meta.userAgent ?? null,
+      ipAddress: meta.ipAddress ?? null,
+      expiresAt,
     });
 
-    this.setRefreshTokenToCookie(res, result.refreshToken);
+    this.setRefreshTokenToCookie(res, refreshToken);
 
     return {
       message,
-      accessToken: result.accessToken,
+      accessToken,
       user: {
         id: user.id,
         email: user.email,

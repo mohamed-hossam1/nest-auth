@@ -39,6 +39,7 @@ import { ResetPasswordService } from './services/reset-password.service';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { ChangePasswordService } from './services/change-password.service';
 import { RefreshService } from './services/refresh.service';
+import { ResendVerificationEmailService } from './services/resend-verification-email.service';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -53,6 +54,7 @@ export class AuthController {
     private readonly resetPasswordService: ResetPasswordService,
     private readonly refreshService: RefreshService,
     private readonly changePasswordService: ChangePasswordService,
+    private readonly resendVerificationEmailService: ResendVerificationEmailService,
   ) {}
 
   @Post('sign-up')
@@ -96,7 +98,7 @@ export class AuthController {
   resendVerificationEmail(
     @Body() resendVerificationEmailDto: ResendVerificationEmailDto,
   ) {
-    return this.signUpService.resendVerificationEmail(
+    return this.resendVerificationEmailService.resendVerificationEmail(
       resendVerificationEmailDto.email,
     );
   }

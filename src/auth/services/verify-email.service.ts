@@ -32,7 +32,7 @@ export class VerifyEmailService {
       throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
     }
 
-    const { token: verificationToken, user } = match;
+    const { token: verificationToken, user, ban } = match;
 
     const isValidSecret = compareSha256(
       parsed.secret,
@@ -48,7 +48,6 @@ export class VerifyEmailService {
     }
 
     if (user.isBanned) {
-      const ban = await this.userService.findBanByUserId(user.id);
       assertUserNotBanned({
         isBanned: true,
         banReason: ban?.banReason,
