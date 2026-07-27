@@ -3,20 +3,22 @@ import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { db } from 'src/db';
 import { UserWithRole, type EmailVerificationToken } from 'src/db/schema';
 import { HashingService } from 'src/hashing/hashing.service';
-import { UsersService } from 'src/users/users.service';
+import { UsersRepository } from 'src/users/repositories/users.repository';
+import { AuthTokensRepository } from 'src/users/repositories/auth-tokens.repository';
 import { SignUpDto } from '../dtos/sign-up.dto';
 import { ResendVerificationEmailService } from './resend-verification-email.service';
 
 @Injectable()
 export class SignUpService {
   constructor(
-    private readonly userService: UsersService,
+    private readonly usersRepository: UsersRepository,
+    private readonly authTokensRepository: AuthTokensRepository,
     private readonly hashingService: HashingService,
     private readonly resendVerificationEmailService: ResendVerificationEmailService,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
-    const match = await this.userService.findUserWithVerificationToken(
+    const match = await this.authTokensRepository.findUserWithVerificationToken(
       signUpDto.email,
     );
 
@@ -28,7 +30,7 @@ export class SignUpService {
 
     try {
       const { user, rawToken } = await db.transaction(async (tx) => {
-        const created = await this.userService.create(
+        const created = await this.usersRepository.create(
           {
             name: signUpDto.name ?? null,
             email: signUpDto.email,
@@ -59,9 +61,10 @@ export class SignUpService {
         throw error;
       }
 
-      const raced = await this.userService.findUserWithVerificationToken(
-        signUpDto.email,
-      );
+      const raced =
+        await this.authTokensRepository.findUserWithVerificationToken(
+          signUpDto.email,
+        );
       if (raced) {
         return this.handleExistingSignUp(raced.user, raced.token);
       }

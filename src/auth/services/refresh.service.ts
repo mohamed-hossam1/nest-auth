@@ -7,12 +7,14 @@ import { assertUserNotBanned } from 'src/common/utils/ban.util';
 import { compareSha256, hashSha256 } from 'src/common/utils/sha256.util';
 import { db } from 'src/db';
 import { TokensService, RefreshJwtPayload } from 'src/tokens/tokens.service';
-import { UsersService } from 'src/users/users.service';
+import { UsersRepository } from 'src/users/repositories/users.repository';
+import { RefreshSessionsRepository } from 'src/users/repositories/refresh-sessions.repository';
 
 @Injectable()
 export class RefreshService {
   constructor(
-    private readonly usersService: UsersService,
+    private readonly usersRepository: UsersRepository,
+    private readonly refreshSessionsRepository: RefreshSessionsRepository,
     private readonly tokensService: TokensService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -39,7 +41,9 @@ export class RefreshService {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
-    const result = await this.usersService.findSessionWithUser(payload.sid);
+    const result = await this.refreshSessionsRepository.findSessionWithUser(
+      payload.sid,
+    );
     if (
       !result ||
       result.session.revokedAt ||
@@ -52,7 +56,9 @@ export class RefreshService {
 
     const isValid = compareSha256(refreshToken, session.tokenHash);
     if (!isValid) {
-      await this.usersService.revokeRefreshSession(session.id);
+      await this.refreshSessionsRepository.update(session.id, {
+        revokedAt: new Date(),
+      });
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
@@ -61,9 +67,9 @@ export class RefreshService {
     }
 
     if (user.isBanned) {
-      await this.usersService.revokeAllRefreshSessions(user.id);
+      await this.refreshSessionsRepository.revokeAll(user.id);
       this.tokensService.clearRefreshTokenCookie(res);
-      const ban = await this.usersService.findBanByUserId(user.id);
+      const ban = await this.usersRepository.findBanByUserId(user.id);
       assertUserNotBanned({
         isBanned: true,
         banReason: ban?.banReason,
@@ -82,7 +88,7 @@ export class RefreshService {
       const accessToken = await this.tokensService.generateAccessToken(user);
       const tokenHash = hashSha256(newRefreshToken);
 
-      await this.usersService.updateRefreshSession(
+      await this.refreshSessionsRepository.update(
         session.id,
         {
           tokenHash,

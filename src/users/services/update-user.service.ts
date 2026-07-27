@@ -8,7 +8,7 @@ import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import type { AuthUser } from 'src/common/types/auth-user.type';
 import { Roles, type User } from 'src/db/schema';
 import { UpdateUserDto } from '../dtos/update-user.dto';
-import { UsersService } from '../users.service';
+import { UsersRepository } from '../repositories/users.repository';
 
 export type PublicUser = {
   id: string;
@@ -23,7 +23,7 @@ export type PublicUser = {
 
 @Injectable()
 export class UpdateUserService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
   async updateMe(currentUser: AuthUser, dto: UpdateUserDto) {
     return this.update(currentUser, currentUser.id, dto);
@@ -45,7 +45,7 @@ export class UpdateUserService {
       throw new BadRequestException(AUTH_MESSAGES.NO_FIELDS_TO_UPDATE);
     }
 
-    const targetUser = await this.usersService.findById(targetUserId);
+    const targetUser = await this.usersRepository.findById(targetUserId);
     if (!targetUser) {
       throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
     }
@@ -58,7 +58,7 @@ export class UpdateUserService {
       patch.avatarUrl = dto.avatarUrl;
     }
 
-    const updated = await this.usersService.update(targetUser.id, patch);
+    const updated = await this.usersRepository.update(targetUser.id, patch);
     if (!updated) {
       throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
     }
@@ -71,7 +71,7 @@ export class UpdateUserService {
 
   async toPublicUser(user: User): Promise<PublicUser> {
     const ban = user.isBanned
-      ? await this.usersService.findBanByUserId(user.id)
+      ? await this.usersRepository.findBanByUserId(user.id)
       : null;
 
     return {

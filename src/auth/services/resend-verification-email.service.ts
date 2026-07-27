@@ -6,20 +6,23 @@ import { db, type DbTransaction } from 'src/db';
 import { UserWithRole, type EmailVerificationToken } from 'src/db/schema';
 import { EmailService } from 'src/email/email.service';
 import { VerificationEmail } from 'src/email/templates/verification.email';
-import { UsersService } from 'src/users/users.service';
+import { UsersRepository } from 'src/users/repositories/users.repository';
+import { AuthTokensRepository } from 'src/users/repositories/auth-tokens.repository';
 import { formatToken, generateRandomToken } from '../utils/token.util';
 import { hashSha256 } from 'src/common/utils/sha256.util';
 
 @Injectable()
 export class ResendVerificationEmailService {
   constructor(
-    private readonly userService: UsersService,
+    private readonly usersRepository: UsersRepository,
+    private readonly authTokensRepository: AuthTokensRepository,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
   ) {}
 
   async resendVerificationEmail(email: string) {
-    const match = await this.userService.findUserWithVerificationToken(email);
+    const match =
+      await this.authTokensRepository.findUserWithVerificationToken(email);
 
     if (!match || match.user.isVerified) {
       return { message: AUTH_MESSAGES.VERIFICATION_EMAIL_SENT };
@@ -34,7 +37,9 @@ export class ResendVerificationEmailService {
   ) {
     const verificationToken =
       token ??
-      (await this.userService.findEmailVerificationTokenByUserId(user.id));
+      (await this.authTokensRepository.findEmailVerificationTokenByUserId(
+        user.id,
+      ));
 
     if (!this.canResendVerification(verificationToken?.expiresAt ?? null)) {
       throw new HttpException(
@@ -60,7 +65,7 @@ export class ResendVerificationEmailService {
     const tokenHash = hashSha256(secret);
     const expiresAt = new Date(Date.now() + AUTH_CONFIG.VERIFY_TOKEN_TTL_MS);
 
-    const token = await this.userService.upsertEmailVerificationToken(
+    const token = await this.authTokensRepository.upsertEmailVerificationToken(
       {
         userId,
         tokenHash,

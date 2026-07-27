@@ -4,9 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { randomUUID } from 'crypto';
 import { assertUserNotBanned } from 'src/common/utils/ban.util';
-import { hashSha256 } from 'src/common/utils/sha256.util';
 import { UserWithRole, type UserRole } from 'src/db/schema';
-import { UsersService } from 'src/users/users.service';
+import { hashSha256 } from 'src/common/utils/sha256.util';
+import { UsersRepository } from 'src/users/repositories/users.repository';
+import { RefreshSessionsRepository } from 'src/users/repositories/refresh-sessions.repository';
 
 export type JwtPayload = {
   sub: string;
@@ -30,7 +31,8 @@ export class TokensService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
+    private readonly usersRepository: UsersRepository,
+    private readonly refreshSessionsRepository: RefreshSessionsRepository,
   ) {}
 
   getRefreshTokenTtlMs(): number {
@@ -114,7 +116,7 @@ export class TokensService {
     meta: SessionMeta = {},
   ) {
     if (user.isBanned) {
-      const ban = await this.usersService.findBanByUserId(user.id);
+      const ban = await this.usersRepository.findBanByUserId(user.id);
       assertUserNotBanned({
         isBanned: true,
         banReason: ban?.banReason,
@@ -127,7 +129,7 @@ export class TokensService {
     const accessToken = await this.generateAccessToken(user);
     const refreshTokenHash = hashSha256(refreshToken);
 
-    await this.usersService.createRefreshSession({
+    await this.refreshSessionsRepository.create({
       id: sessionId,
       userId: user.id,
       tokenHash: refreshTokenHash,
@@ -193,11 +195,13 @@ export class TokensService {
     );
 
     if (sessionId) {
-      await this.usersService.revokeRefreshSession(sessionId);
+      await this.refreshSessionsRepository.update(sessionId, {
+        revokedAt: new Date(),
+      });
     }
   }
 
   async revokeAllSessions(userId: string): Promise<void> {
-    await this.usersService.revokeAllRefreshSessions(userId);
+    await this.refreshSessionsRepository.revokeAll(userId);
   }
 }

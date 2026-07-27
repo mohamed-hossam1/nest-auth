@@ -8,12 +8,12 @@ import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import type { AuthUser } from 'src/common/types/auth-user.type';
 import { Roles } from 'src/db/schema';
 import { TokensService } from 'src/tokens/tokens.service';
-import { UsersService } from '../users.service';
+import { UsersRepository } from '../repositories/users.repository';
 
 @Injectable()
 export class DeleteUserService {
   constructor(
-    private readonly usersService: UsersService,
+    private readonly usersRepository: UsersRepository,
     private readonly tokensService: TokensService,
   ) {}
 
@@ -25,13 +25,13 @@ export class DeleteUserService {
       throw new ForbiddenException(AUTH_MESSAGES.FORBIDDEN);
     }
 
-    const targetUser = await this.usersService.findById(targetUserId);
+    const targetUser = await this.usersRepository.findById(targetUserId);
 
     if (!targetUser) {
       throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
     }
 
-    await this.usersService.delete(targetUser.id);
+    await this.usersRepository.delete(targetUser.id);
 
     if (isSelf) {
       this.tokensService.clearRefreshTokenCookie(res);

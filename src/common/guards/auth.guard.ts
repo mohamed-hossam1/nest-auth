@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
-import { UsersService } from 'src/users/users.service';
+import { UsersRepository } from 'src/users/repositories/users.repository';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { AuthUser } from 'src/common/types/auth-user.type';
 import { assertUserNotBanned } from 'src/common/utils/ban.util';
@@ -28,7 +28,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
+    private readonly usersRepository: UsersRepository,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -44,13 +44,13 @@ export class AuthGuard implements CanActivate {
         secret: this.configService.get('JWT_ACCESS_SECRET'),
       });
 
-      const user = await this.usersService.findByEmail(payload.email);
+      const user = await this.usersRepository.findByEmail(payload.email);
       if (!user?.isVerified) {
         throw new UnauthorizedException(AUTH_MESSAGES.INVALID_ACCESS_TOKEN);
       }
 
       if (user.isBanned) {
-        const ban = await this.usersService.findBanByUserId(user.id);
+        const ban = await this.usersRepository.findBanByUserId(user.id);
         assertUserNotBanned({
           isBanned: true,
           banReason: ban?.banReason,

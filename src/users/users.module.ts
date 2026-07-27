@@ -6,19 +6,23 @@ import { BanUserService } from './services/ban-user.service';
 import { DeleteUserService } from './services/delete-user.service';
 import { UpdateUserService } from './services/update-user.service';
 import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
+import { UsersRepository } from './repositories/users.repository';
+import { RefreshSessionsRepository } from './repositories/refresh-sessions.repository';
+import { AuthTokensRepository } from './repositories/auth-tokens.repository';
 
 @Module({
   imports: [forwardRef(() => TokensModule)],
   controllers: [UsersController],
   providers: [
-    UsersService,
+    UsersRepository,
+    RefreshSessionsRepository,
+    AuthTokensRepository,
     DeleteUserService,
     UpdateUserService,
     BanUserService,
     AuthGuard,
     RolesGuard,
   ],
-  exports: [UsersService],
+  exports: [UsersRepository, RefreshSessionsRepository, AuthTokensRepository],
 })
 export class UsersModule {}

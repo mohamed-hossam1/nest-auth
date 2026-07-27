@@ -25,7 +25,7 @@ import { User } from 'src/common/decorators/user.decorator';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import type { AuthUser } from 'src/common/types/auth-user.type';
-import { UsersService } from 'src/users/users.service';
+import { UsersRepository } from './repositories/users.repository';
 import { BanUserDto } from './dtos/ban-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { BanUserService } from './services/ban-user.service';
@@ -39,7 +39,7 @@ export class UsersController {
     private readonly deleteUserService: DeleteUserService,
     private readonly updateUserService: UpdateUserService,
     private readonly banUserService: BanUserService,
-    private readonly usersService: UsersService,
+    private readonly usersRepository: UsersRepository,
   ) {}
 
   @Get('me')
@@ -47,7 +47,7 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user profile' })
   async me(@User() user: AuthUser) {
-    const fullUser = await this.usersService.findById(user.id);
+    const fullUser = await this.usersRepository.findById(user.id);
     if (!fullUser) {
       return { user };
     }

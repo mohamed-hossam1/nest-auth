@@ -111,6 +111,20 @@ export class AuthController {
     return this.refreshService.refresh(req.cookies?.refresh_token, res);
   }
 
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({ summary: 'Logout and revoke the current refresh session' })
+  logout(
+    @User() user: AuthUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.logoutService.logout(user.id, res, req.cookies?.refresh_token);
+  }
+
   @Get('sessions')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
@@ -168,20 +182,6 @@ export class AuthController {
       user.id,
       req.cookies?.refresh_token,
     );
-  }
-
-  @Post('logout')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiCookieAuth('refresh_token')
-  @ApiOperation({ summary: 'Logout and revoke the current refresh session' })
-  logout(
-    @User() user: AuthUser,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return this.logoutService.logout(user.id, res, req.cookies?.refresh_token);
   }
 
   @Post('forgot-password')

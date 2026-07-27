@@ -12,7 +12,8 @@ import type { AuthUser } from 'src/common/types/auth-user.type';
 import { db } from 'src/db';
 import { Roles, type User, type UserBan } from 'src/db/schema';
 import { BanUserDto } from '../dtos/ban-user.dto';
-import { UsersService } from '../users.service';
+import { UsersRepository } from '../repositories/users.repository';
+import { RefreshSessionsRepository } from '../repositories/refresh-sessions.repository';
 
 export type PublicBan = {
   bannedAt: Date;
@@ -32,7 +33,10 @@ export type PublicUserWithBan = {
 
 @Injectable()
 export class BanUserService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly refreshSessionsRepository: RefreshSessionsRepository,
+  ) {}
 
   async ban(currentUser: AuthUser, targetUserId: string, dto: BanUserDto) {
     this.assertAdmin(currentUser);
@@ -41,7 +45,7 @@ export class BanUserService {
       throw new BadRequestException(AUTH_MESSAGES.CANNOT_BAN_SELF);
     }
 
-    const targetUser = await this.usersService.findById(targetUserId);
+    const targetUser = await this.usersRepository.findById(targetUserId);
     if (!targetUser) {
       throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
     }
@@ -56,13 +60,13 @@ export class BanUserService {
     }
 
     const { user, ban } = await db.transaction(async (tx) => {
-      const result = await this.usersService.banUser(
+      const result = await this.usersRepository.banUser(
         targetUser.id,
         banReason,
         tx,
       );
 
-      await this.usersService.revokeAllRefreshSessions(targetUser.id, tx);
+      await this.refreshSessionsRepository.revokeAll(targetUser.id, tx);
 
       return result;
     });
@@ -76,7 +80,7 @@ export class BanUserService {
   async unban(currentUser: AuthUser, targetUserId: string) {
     this.assertAdmin(currentUser);
 
-    const targetUser = await this.usersService.findById(targetUserId);
+    const targetUser = await this.usersRepository.findById(targetUserId);
     if (!targetUser) {
       throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
     }
@@ -86,7 +90,7 @@ export class BanUserService {
     }
 
     const user = await db.transaction(async (tx) => {
-      return this.usersService.unbanUser(targetUser.id, tx);
+      return this.usersRepository.unbanUser(targetUser.id, tx);
     });
 
     if (!user) {
@@ -107,7 +111,7 @@ export class BanUserService {
       return this.toPublicUserWithBan(user, null);
     }
 
-    const ban = await this.usersService.findBanByUserId(user.id);
+    const ban = await this.usersRepository.findBanByUserId(user.id);
     return this.toPublicUserWithBan(user, ban);
   }
 

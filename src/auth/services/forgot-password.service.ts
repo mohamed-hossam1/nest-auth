@@ -5,7 +5,8 @@ import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { db } from 'src/db';
 import { EmailService } from 'src/email/email.service';
 import { PasswordResetEmail } from 'src/email/templates/password-reset.email';
-import { UsersService } from 'src/users/users.service';
+import { UsersRepository } from 'src/users/repositories/users.repository';
+import { AuthTokensRepository } from 'src/users/repositories/auth-tokens.repository';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
 import { formatToken, generateRandomToken } from '../utils/token.util';
 import { hashSha256 } from 'src/common/utils/sha256.util';
@@ -13,7 +14,8 @@ import { hashSha256 } from 'src/common/utils/sha256.util';
 @Injectable()
 export class ForgotPasswordService {
   constructor(
-    private readonly userService: UsersService,
+    private readonly usersRepository: UsersRepository,
+    private readonly authTokensRepository: AuthTokensRepository,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
   ) {}
@@ -21,14 +23,16 @@ export class ForgotPasswordService {
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     const success = { message: AUTH_MESSAGES.FORGOT_PASSWORD_SUCCESS };
 
-    const user = await this.userService.findByEmail(forgotPasswordDto.email);
+    const user = await this.usersRepository.findByEmail(
+      forgotPasswordDto.email,
+    );
 
     if (!user || !user.isVerified) {
       return success;
     }
 
     const passwordResetToken =
-      await this.userService.findPasswordResetTokenByUserId(user.id);
+      await this.authTokensRepository.findPasswordResetTokenByUserId(user.id);
 
     if (!this.canResendPasswordReset(passwordResetToken?.expiresAt ?? null)) {
       return success;
@@ -39,7 +43,7 @@ export class ForgotPasswordService {
     const expiresAt = new Date(Date.now() + AUTH_CONFIG.RESET_TOKEN_TTL_MS);
 
     const token = await db.transaction(async (tx) => {
-      return this.userService.upsertPasswordResetToken(
+      return this.authTokensRepository.upsertPasswordResetToken(
         {
           userId: user.id,
           tokenHash,

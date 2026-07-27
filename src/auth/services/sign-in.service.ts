@@ -4,19 +4,19 @@ import { AUTH_CONFIG } from 'src/common/constants/auth.constant';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { HashingService } from 'src/hashing/hashing.service';
 import { TokensService } from 'src/tokens/tokens.service';
-import { UsersService } from 'src/users/users.service';
+import { UsersRepository } from 'src/users/repositories/users.repository';
 import { SignInDto } from '../dtos/sign-in.dto';
 
 @Injectable()
 export class SignInService {
   constructor(
-    private readonly userService: UsersService,
+    private readonly usersRepository: UsersRepository,
     private readonly hashingService: HashingService,
     private readonly tokensService: TokensService,
   ) {}
 
   async signIn(signInDto: SignInDto, res: Response, req?: Request) {
-    const user = await this.userService.findByEmail(signInDto.email);
+    const user = await this.usersRepository.findByEmail(signInDto.email);
 
     const passwordValid = await this.hashingService.compare(
       signInDto.password,

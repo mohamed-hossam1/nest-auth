@@ -4,14 +4,16 @@ import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { assertUserNotBanned } from 'src/common/utils/ban.util';
 import { db } from 'src/db';
 import { TokensService } from 'src/tokens/tokens.service';
-import { UsersService } from 'src/users/users.service';
+import { UsersRepository } from 'src/users/repositories/users.repository';
+import { AuthTokensRepository } from 'src/users/repositories/auth-tokens.repository';
 import { parseToken } from '../utils/token.util';
 import { compareSha256 } from 'src/common/utils/sha256.util';
 
 @Injectable()
 export class VerifyEmailService {
   constructor(
-    private readonly userService: UsersService,
+    private readonly usersRepository: UsersRepository,
+    private readonly authTokensRepository: AuthTokensRepository,
     private readonly tokensService: TokensService,
   ) {}
 
@@ -25,9 +27,8 @@ export class VerifyEmailService {
       throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
     }
 
-    const match = await this.userService.findEmailVerificationTokenById(
-      parsed.id,
-    );
+    const match =
+      await this.authTokensRepository.findEmailVerificationTokenById(parsed.id);
     if (!match) {
       throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
     }
@@ -43,7 +44,7 @@ export class VerifyEmailService {
     }
 
     if (user.isVerified) {
-      await this.userService.deleteEmailVerificationToken(user.id);
+      await this.authTokensRepository.deleteEmailVerificationToken(user.id);
       return { message: AUTH_MESSAGES.EMAIL_ALREADY_VERIFIED };
     }
 
@@ -59,13 +60,13 @@ export class VerifyEmailService {
     }
 
     const verifiedUser = await db.transaction(async (tx) => {
-      const updated = await this.userService.update(
+      const updated = await this.usersRepository.update(
         user.id,
         { isVerified: true },
         tx,
       );
 
-      await this.userService.deleteEmailVerificationToken(user.id, tx);
+      await this.authTokensRepository.deleteEmailVerificationToken(user.id, tx);
 
       return updated;
     });

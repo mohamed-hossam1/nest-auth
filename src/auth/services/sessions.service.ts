@@ -7,14 +7,14 @@ import type { Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import type { RefreshSession } from 'src/db/schema';
 import { TokensService } from 'src/tokens/tokens.service';
-import { UsersService } from 'src/users/users.service';
+import { RefreshSessionsRepository } from 'src/users/repositories/refresh-sessions.repository';
 import type { SessionResponseDto } from '../dtos/session-response.dto';
 import { parseUserAgent } from '../utils/user-agent.util';
 
 @Injectable()
 export class SessionsService {
   constructor(
-    private readonly usersService: UsersService,
+    private readonly refreshSessionsRepository: RefreshSessionsRepository,
     private readonly tokensService: TokensService,
   ) {}
 
@@ -23,7 +23,7 @@ export class SessionsService {
     refreshToken?: string,
   ): Promise<{ sessions: SessionResponseDto[] }> {
     const [sessions, currentSessionId] = await Promise.all([
-      this.usersService.findActiveRefreshSessionsByUserId(userId),
+      this.refreshSessionsRepository.findActiveByUserId(userId),
       this.tokensService.getSessionIdFromRefreshToken(refreshToken, userId),
     ]);
 
@@ -40,7 +40,7 @@ export class SessionsService {
     res: Response,
     refreshToken?: string,
   ) {
-    const session = await this.usersService.findActiveRefreshSessionForUser(
+    const session = await this.refreshSessionsRepository.findActiveForUser(
       sessionId,
       userId,
     );
@@ -49,7 +49,9 @@ export class SessionsService {
       throw new NotFoundException(AUTH_MESSAGES.SESSION_NOT_FOUND);
     }
 
-    await this.usersService.revokeRefreshSession(session.id);
+    await this.refreshSessionsRepository.update(session.id, {
+      revokedAt: new Date(),
+    });
 
     const currentSessionId =
       await this.tokensService.getSessionIdFromRefreshToken(
@@ -78,7 +80,7 @@ export class SessionsService {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
-    await this.usersService.revokeAllRefreshSessionsExcept(
+    await this.refreshSessionsRepository.revokeAllExcept(
       userId,
       currentSessionId,
     );
