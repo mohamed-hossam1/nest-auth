@@ -10,7 +10,9 @@ import { SignUpService } from './services/sign-up.service';
 import { SignInService } from './services/sign-in.service';
 import { VerifyEmailService } from './services/verify-email.service';
 import { LogoutService } from './services/logout.service';
-import { SessionsService } from './services/sessions.service';
+import { ListSessionsService } from './services/list-sessions.service';
+import { RevokeSessionService } from './services/revoke-session.service';
+import { RevokeAllOtherSessionsService } from './services/revoke-all-other-sessions.service';
 import { ForgotPasswordService } from './services/forgot-password.service';
 import { ResetPasswordService } from './services/reset-password.service';
 import { ChangePasswordService } from './services/change-password.service';
@@ -31,7 +33,9 @@ import { ResendVerificationEmailService } from './services/resend-verification-e
     SignInService,
     VerifyEmailService,
     LogoutService,
-    SessionsService,
+    ListSessionsService,
+    RevokeSessionService,
+    RevokeAllOtherSessionsService,
     ForgotPasswordService,
     ResetPasswordService,
     ChangePasswordService,

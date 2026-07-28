@@ -92,6 +92,29 @@ export class RefreshSessionsRepository {
     return session ?? null;
   }
 
+  async revokeSessionForUser(
+    sessionId: string,
+    userId: string,
+    executor: DbExecutor = db,
+  ): Promise<RefreshSession | null> {
+    const [session] = await executor
+      .update(refreshSessions)
+      .set({
+        revokedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(refreshSessions.id, sessionId),
+          eq(refreshSessions.userId, userId),
+          isNull(refreshSessions.revokedAt),
+        ),
+      )
+      .returning();
+
+    return session ?? null;
+  }
+
   async revokeAll(userId: string, executor: DbExecutor = db) {
     return executor
       .update(refreshSessions)

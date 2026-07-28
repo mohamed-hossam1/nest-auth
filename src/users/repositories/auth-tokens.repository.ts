@@ -10,6 +10,7 @@ import {
   UserWithRole,
   type EmailVerificationToken,
   type NewEmailVerificationToken,
+  type PasswordResetToken,
   type NewPasswordResetToken,
 } from 'src/db/schema';
 
@@ -153,6 +154,27 @@ export class AuthTokensRepository {
         emailVerificationTokens,
         eq(users.id, emailVerificationTokens.userId),
       )
+      .where(eq(users.email, normalizeEmail(email)))
+      .limit(1);
+
+    if (!row) return null;
+    return { user: row.user, token: row.token };
+  }
+
+  async findUserWithPasswordResetToken(
+    email: string,
+    executor: DbExecutor = db,
+  ): Promise<{
+    user: UserWithRole;
+    token: PasswordResetToken | null;
+  } | null> {
+    const [row] = await executor
+      .select({
+        user: users,
+        token: passwordResetTokens,
+      })
+      .from(users)
+      .leftJoin(passwordResetTokens, eq(users.id, passwordResetTokens.userId))
       .where(eq(users.email, normalizeEmail(email)))
       .limit(1);
 

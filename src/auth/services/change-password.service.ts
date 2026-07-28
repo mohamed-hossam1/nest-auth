@@ -20,6 +20,12 @@ export class ChangePasswordService {
   ) {}
 
   async changePassword(user: AuthUser, changePasswordDto: ChangePasswordDto) {
+    if (changePasswordDto.oldPassword === changePasswordDto.newPassword) {
+      throw new ConflictException(
+        AUTH_MESSAGES.CURRENT_PASSWORD_AND_NEW_PASSWORD_ARE_THE_SAME,
+      );
+    }
+
     const existingUser = await this.usersRepository.findById(user.id);
 
     if (!existingUser) {
@@ -33,17 +39,6 @@ export class ChangePasswordService {
 
     if (!passwordValid) {
       throw new UnauthorizedException(AUTH_MESSAGES.CURRENT_PASSWORD_INVALID);
-    }
-
-    const isSame = await this.hashingService.compare(
-      changePasswordDto.newPassword,
-      existingUser.passwordHash,
-    );
-
-    if (isSame) {
-      throw new ConflictException(
-        AUTH_MESSAGES.CURRENT_PASSWORD_AND_NEW_PASSWORD_ARE_THE_SAME,
-      );
     }
 
     const passwordHash = await this.hashingService.hash(

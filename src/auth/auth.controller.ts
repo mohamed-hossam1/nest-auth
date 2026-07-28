@@ -33,7 +33,9 @@ import { SignUpService } from './services/sign-up.service';
 import { SignInService } from './services/sign-in.service';
 import { VerifyEmailService } from './services/verify-email.service';
 import { LogoutService } from './services/logout.service';
-import { SessionsService } from './services/sessions.service';
+import { ListSessionsService } from './services/list-sessions.service';
+import { RevokeSessionService } from './services/revoke-session.service';
+import { RevokeAllOtherSessionsService } from './services/revoke-all-other-sessions.service';
 import { ForgotPasswordService } from './services/forgot-password.service';
 import { ResetPasswordService } from './services/reset-password.service';
 import { ChangePasswordDto } from './dtos/change-password.dto';
@@ -49,7 +51,9 @@ export class AuthController {
     private readonly signInService: SignInService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly logoutService: LogoutService,
-    private readonly sessionsService: SessionsService,
+    private readonly listSessionsService: ListSessionsService,
+    private readonly revokeSessionService: RevokeSessionService,
+    private readonly revokeAllOtherSessionsService: RevokeAllOtherSessionsService,
     private readonly forgotPasswordService: ForgotPasswordService,
     private readonly resetPasswordService: ResetPasswordService,
     private readonly refreshService: RefreshService,
@@ -136,7 +140,7 @@ export class AuthController {
   })
   @ApiOkResponse({ type: SessionsListResponseDto })
   listSessions(@User() user: AuthUser, @Req() req: Request) {
-    return this.sessionsService.listSessions(
+    return this.listSessionsService.listSessions(
       user.id,
       req.cookies?.refresh_token,
     );
@@ -158,7 +162,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.sessionsService.revokeSession(
+    return this.revokeSessionService.revokeSession(
       user.id,
       revokeSessionDto.sessionId,
       res,
@@ -178,7 +182,7 @@ export class AuthController {
       'Revokes every active refresh session for the authenticated user except the current session associated with the request. The current session remains active and no new refresh token is issued.',
   })
   revokeAllOtherSessions(@User() user: AuthUser, @Req() req: Request) {
-    return this.sessionsService.revokeAllOtherSessions(
+    return this.revokeAllOtherSessionsService.revokeAllOtherSessions(
       user.id,
       req.cookies?.refresh_token,
     );
