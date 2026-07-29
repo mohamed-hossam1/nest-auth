@@ -28,8 +28,11 @@ import type { AuthUser } from 'src/common/types/auth-user.type';
 import { BanUserDto } from './dtos/ban-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { BanUserService } from './services/ban-user.service';
+import { UnbanUserService } from './services/unban-user.service';
 import { DeleteUserService } from './services/delete-user.service';
+import { DeleteMeService } from './services/delete-me.service';
 import { UpdateUserService } from './services/update-user.service';
+import { UpdateMeService } from './services/update-me.service';
 import { ROLES } from 'src/db/schema';
 
 @ApiTags('users')
@@ -37,8 +40,11 @@ import { ROLES } from 'src/db/schema';
 export class UsersController {
   constructor(
     private readonly deleteUserService: DeleteUserService,
+    private readonly deleteMeService: DeleteMeService,
     private readonly updateUserService: UpdateUserService,
+    private readonly updateMeService: UpdateMeService,
     private readonly banUserService: BanUserService,
+    private readonly unbanUserService: UnbanUserService,
   ) {}
 
   @Get('me')
@@ -70,7 +76,7 @@ export class UsersController {
       'Authenticated users can update their own name and avatarUrl only.',
   })
   updateMe(@User() user: AuthUser, @Body() updateUserDto: UpdateUserDto) {
-    return this.updateUserService.updateMe(user, updateUserDto);
+    return this.updateMeService.updateMe(user, updateUserDto);
   }
 
   @Patch(':id')
@@ -106,7 +112,7 @@ export class UsersController {
       'Authenticated users can delete their own account. Clears the refresh cookie.',
   })
   deleteMe(@User() user: AuthUser, @Res({ passthrough: true }) res: Response) {
-    return this.deleteUserService.deleteMe(user, res);
+    return this.deleteMeService.deleteMe(user, res);
   }
 
   @Delete(':id')
@@ -124,12 +130,8 @@ export class UsersController {
     description: 'UUID of the user to delete',
     format: 'uuid',
   })
-  delete(
-    @User() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return this.deleteUserService.delete(user, id, res);
+  delete(@User() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.deleteUserService.delete(user, id);
   }
 
   @Post(':id/ban')
@@ -171,6 +173,6 @@ export class UsersController {
     format: 'uuid',
   })
   unban(@User() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.banUserService.unban(user, id);
+    return this.unbanUserService.unban(user, id);
   }
 }

@@ -10,26 +10,11 @@ import {
 } from 'src/common/constants/messages.constant';
 import type { AuthUser } from 'src/common/types/auth-user.type';
 import { db } from 'src/db';
-import { ROLES, type User, type UserBan } from 'src/db/schema';
+import { ROLES } from 'src/db/schema';
 import { BanUserDto } from '../dtos/ban-user.dto';
 import { UsersRepository } from '../repositories/users.repository';
 import { RefreshSessionsRepository } from '../repositories/refresh-sessions.repository';
-
-export type PublicBan = {
-  bannedAt: Date;
-  banReason: string;
-};
-
-export type PublicUserWithBan = {
-  id: string;
-  email: string;
-  name: string | null;
-  avatarUrl: string | null;
-  role: User['role'];
-  isVerified: boolean;
-  isBanned: boolean;
-  ban: PublicBan | null;
-};
+import { toPublicUser } from '../utils/users.mapper';
 
 @Injectable()
 export class BanUserService {
@@ -73,63 +58,7 @@ export class BanUserService {
 
     return {
       message: AUTH_MESSAGES.USER_BANNED_SUCCESS,
-      user: this.toPublicUserWithBan(user, ban),
-    };
-  }
-
-  async unban(currentUser: AuthUser, targetUserId: string) {
-    this.assertAdmin(currentUser);
-
-    const targetUser = await this.usersRepository.findById(targetUserId);
-    if (!targetUser) {
-      throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
-    }
-
-    if (!targetUser.isBanned) {
-      throw new BadRequestException(AUTH_MESSAGES.USER_NOT_BANNED);
-    }
-
-    const user = await db.transaction(async (tx) => {
-      return this.usersRepository.unbanUser(targetUser.id, tx);
-    });
-
-    if (!user) {
-      throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
-    }
-
-    return {
-      message: AUTH_MESSAGES.USER_UNBANNED_SUCCESS,
-      user: this.toPublicUserWithBan(user, null),
-    };
-  }
-
-  async toPublicUserProfile(user: User): Promise<PublicUserWithBan> {
-    if (!user.isBanned) {
-      return this.toPublicUserWithBan(user, null);
-    }
-
-    const ban = await this.usersRepository.findBanByUserId(user.id);
-    return this.toPublicUserWithBan(user, ban);
-  }
-
-  toPublicUserWithBan(
-    user: User,
-    ban: Pick<UserBan, 'bannedAt' | 'banReason'> | null,
-  ): PublicUserWithBan {
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
-      role: user.role,
-      isVerified: user.isVerified,
-      isBanned: user.isBanned,
-      ban: ban
-        ? {
-            bannedAt: ban.bannedAt,
-            banReason: ban.banReason,
-          }
-        : null,
+      user: toPublicUser(user, ban),
     };
   }
 
