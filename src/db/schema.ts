@@ -21,7 +21,7 @@ export const userRoleEnum = pgEnum('user_role', ['user', 'admin']);
 
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 
-export const Roles = {
+export const ROLES = {
   USER: 'user',
   ADMIN: 'admin',
 } as const satisfies Record<string, UserRole>;

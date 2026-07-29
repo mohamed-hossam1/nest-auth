@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import type { AuthUser } from 'src/common/types/auth-user.type';
-import { Roles, type User } from 'src/db/schema';
+import { ROLES, type User } from 'src/db/schema';
 import { UpdateUserDto } from '../dtos/update-user.dto';
 import { UsersRepository } from '../repositories/users.repository';
 
@@ -34,7 +34,7 @@ export class UpdateUserService {
     targetUserId: string,
     dto: UpdateUserDto,
   ) {
-    const isAdmin = currentUser.role === Roles.ADMIN;
+    const isAdmin = currentUser.role === ROLES.ADMIN;
     const isSelf = currentUser.id === targetUserId;
 
     if (!isAdmin && !isSelf) {
@@ -45,11 +45,6 @@ export class UpdateUserService {
       throw new BadRequestException(AUTH_MESSAGES.NO_FIELDS_TO_UPDATE);
     }
 
-    const targetUser = await this.usersRepository.findById(targetUserId);
-    if (!targetUser) {
-      throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
-    }
-
     const patch: { name?: string | null; avatarUrl?: string | null } = {};
     if (dto.name !== undefined) {
       patch.name = dto.name;
@@ -58,7 +53,7 @@ export class UpdateUserService {
       patch.avatarUrl = dto.avatarUrl;
     }
 
-    const updated = await this.usersRepository.update(targetUser.id, patch);
+    const updated = await this.usersRepository.update(targetUserId, patch);
     if (!updated) {
       throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
     }

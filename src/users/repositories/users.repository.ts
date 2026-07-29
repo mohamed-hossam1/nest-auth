@@ -87,8 +87,15 @@ export class UsersRepository {
     return user ?? null;
   }
 
-  async delete(id: string, executor: DbExecutor = db) {
-    return executor.delete(users).where(eq(users.id, id));
+  async delete(
+    id: string,
+    executor: DbExecutor = db,
+  ): Promise<UserWithRole | null> {
+    const [user] = await executor
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning();
+    return user ?? null;
   }
 
   async findBanByUserId(

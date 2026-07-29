@@ -1,6 +1,3 @@
-/**
- * Escape a string for safe interpolation into HTML text and attribute values.
- */
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

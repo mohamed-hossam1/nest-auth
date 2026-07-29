@@ -6,4 +6,6 @@ export type AuthUser = {
   name: string | null;
   avatarUrl: string | null;
   role: UserRole;
+  isVerified: boolean;
+  isBanned: boolean;
 };

@@ -2,11 +2,10 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AUTH_CONFIG } from 'src/common/constants/auth.constant';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
-import { db, type DbTransaction } from 'src/db';
+import { type DbTransaction } from 'src/db';
 import { UserWithRole, type EmailVerificationToken } from 'src/db/schema';
 import { EmailService } from 'src/email/email.service';
 import { VerificationEmail } from 'src/email/templates/verification.email';
-import { UsersRepository } from 'src/users/repositories/users.repository';
 import { AuthTokensRepository } from 'src/users/repositories/auth-tokens.repository';
 import { formatToken, generateRandomToken } from '../utils/token.util';
 import { hashSha256 } from 'src/common/utils/sha256.util';
@@ -14,7 +13,6 @@ import { hashSha256 } from 'src/common/utils/sha256.util';
 @Injectable()
 export class ResendVerificationEmailService {
   constructor(
-    private readonly usersRepository: UsersRepository,
     private readonly authTokensRepository: AuthTokensRepository,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
@@ -48,9 +46,7 @@ export class ResendVerificationEmailService {
       );
     }
 
-    const rawToken = await db.transaction(async (tx) => {
-      return this.issueVerificationToken(user.id, tx);
-    });
+    const rawToken = await this.issueVerificationToken(user.id);
 
     this.sendVerificationEmail(user.email, user.name, rawToken);
 
@@ -59,7 +55,7 @@ export class ResendVerificationEmailService {
 
   async issueVerificationToken(
     userId: string,
-    tx: DbTransaction,
+    tx?: DbTransaction,
   ): Promise<string> {
     const secret = generateRandomToken();
     const tokenHash = hashSha256(secret);

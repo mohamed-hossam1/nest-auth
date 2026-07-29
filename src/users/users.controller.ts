@@ -25,12 +25,12 @@ import { User } from 'src/common/decorators/user.decorator';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import type { AuthUser } from 'src/common/types/auth-user.type';
-import { UsersRepository } from './repositories/users.repository';
 import { BanUserDto } from './dtos/ban-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { BanUserService } from './services/ban-user.service';
 import { DeleteUserService } from './services/delete-user.service';
 import { UpdateUserService } from './services/update-user.service';
+import { ROLES } from 'src/db/schema';
 
 @ApiTags('users')
 @Controller('users')
@@ -39,21 +39,24 @@ export class UsersController {
     private readonly deleteUserService: DeleteUserService,
     private readonly updateUserService: UpdateUserService,
     private readonly banUserService: BanUserService,
-    private readonly usersRepository: UsersRepository,
   ) {}
 
   @Get('me')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user profile' })
-  async me(@User() user: AuthUser) {
-    const fullUser = await this.usersRepository.findById(user.id);
-    if (!fullUser) {
-      return { user };
-    }
-
+  me(@User() user: AuthUser) {
     return {
-      user: await this.banUserService.toPublicUserProfile(fullUser),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+        role: user.role,
+        isVerified: user.isVerified,
+        isBanned: user.isBanned,
+        ban: null,
+      },
     };
   }
 
@@ -72,12 +75,12 @@ export class UsersController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Update a user profile',
-    description:
-      'Admins can update any user. Regular users can only update their own profile. Accepts name and avatarUrl only.',
+    description: 'Admin-only. Updates any user profile.',
   })
   @ApiParam({
     name: 'id',
@@ -92,15 +95,29 @@ export class UsersController {
     return this.updateUserService.update(user, id, updateUserDto);
   }
 
-  @Delete(':id')
+  @Delete('me')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('refresh_token')
   @ApiOperation({
-    summary: 'Delete a user',
+    summary: 'Delete current user account',
     description:
-      'Admins can delete any user. Regular users can only delete their own account. Self-deletion clears the refresh cookie.',
+      'Authenticated users can delete their own account. Clears the refresh cookie.',
+  })
+  deleteMe(@User() user: AuthUser, @Res({ passthrough: true }) res: Response) {
+    return this.deleteUserService.deleteMe(user, res);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({
+    summary: 'Delete a user',
+    description: 'Admin-only. Deletes any user.',
   })
   @ApiParam({
     name: 'id',
@@ -118,7 +135,7 @@ export class UsersController {
   @Post(':id/ban')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles(ROLES.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Ban a user',
@@ -141,7 +158,7 @@ export class UsersController {
   @Post(':id/unban')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles(ROLES.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Unban a user',

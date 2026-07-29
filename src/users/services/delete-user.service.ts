@@ -6,7 +6,7 @@ import {
 import type { Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import type { AuthUser } from 'src/common/types/auth-user.type';
-import { Roles } from 'src/db/schema';
+import { ROLES } from 'src/db/schema';
 import { TokensService } from 'src/tokens/tokens.service';
 import { UsersRepository } from '../repositories/users.repository';
 
@@ -17,21 +17,23 @@ export class DeleteUserService {
     private readonly tokensService: TokensService,
   ) {}
 
+  async deleteMe(currentUser: AuthUser, res: Response) {
+    return this.delete(currentUser, currentUser.id, res);
+  }
+
   async delete(currentUser: AuthUser, targetUserId: string, res: Response) {
-    const isAdmin = currentUser.role === Roles.ADMIN;
+    const isAdmin = currentUser.role === ROLES.ADMIN;
     const isSelf = currentUser.id === targetUserId;
 
     if (!isAdmin && !isSelf) {
       throw new ForbiddenException(AUTH_MESSAGES.FORBIDDEN);
     }
 
-    const targetUser = await this.usersRepository.findById(targetUserId);
+    const deletedUser = await this.usersRepository.delete(targetUserId);
 
-    if (!targetUser) {
+    if (!deletedUser) {
       throw new NotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
     }
-
-    await this.usersRepository.delete(targetUser.id);
 
     if (isSelf) {
       this.tokensService.clearRefreshTokenCookie(res);

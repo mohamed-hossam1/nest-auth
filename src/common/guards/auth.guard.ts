@@ -44,7 +44,11 @@ export class AuthGuard implements CanActivate {
         secret: this.configService.get('JWT_ACCESS_SECRET'),
       });
 
-      const user = await this.usersRepository.findByEmail(payload.email);
+      if (!payload.sub) {
+        throw new UnauthorizedException(AUTH_MESSAGES.INVALID_ACCESS_TOKEN);
+      }
+
+      const user = await this.usersRepository.findById(payload.sub);
       if (!user?.isVerified) {
         throw new UnauthorizedException(AUTH_MESSAGES.INVALID_ACCESS_TOKEN);
       }
@@ -63,11 +67,12 @@ export class AuthGuard implements CanActivate {
         name: user.name,
         avatarUrl: user.avatarUrl,
         role: user.role,
+        isVerified: user.isVerified,
+        isBanned: user.isBanned,
       };
 
       return true;
     } catch (error) {
-      // Preserve intentional HTTP errors (e.g. banned → 403).
       if (error instanceof HttpException) {
         throw error;
       }

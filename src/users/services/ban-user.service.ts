@@ -10,7 +10,7 @@ import {
 } from 'src/common/constants/messages.constant';
 import type { AuthUser } from 'src/common/types/auth-user.type';
 import { db } from 'src/db';
-import { Roles, type User, type UserBan } from 'src/db/schema';
+import { ROLES, type User, type UserBan } from 'src/db/schema';
 import { BanUserDto } from '../dtos/ban-user.dto';
 import { UsersRepository } from '../repositories/users.repository';
 import { RefreshSessionsRepository } from '../repositories/refresh-sessions.repository';
@@ -103,9 +103,6 @@ export class BanUserService {
     };
   }
 
-  /**
-   * Builds a public user profile, attaching ban details when the user is banned.
-   */
   async toPublicUserProfile(user: User): Promise<PublicUserWithBan> {
     if (!user.isBanned) {
       return this.toPublicUserWithBan(user, null);
@@ -137,7 +134,7 @@ export class BanUserService {
   }
 
   private assertAdmin(currentUser: AuthUser) {
-    if (currentUser.role !== Roles.ADMIN) {
+    if (currentUser.role !== ROLES.ADMIN) {
       throw new ForbiddenException(AUTH_MESSAGES.FORBIDDEN);
     }
   }
