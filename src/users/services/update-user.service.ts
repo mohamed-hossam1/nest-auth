@@ -1,12 +1,9 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
-import type { AuthUser } from 'src/common/types/auth-user.type';
-import { ROLES } from 'src/db/schema';
 import { UpdateUserDto } from '../dtos/update-user.dto';
 import { UsersRepository } from '../repositories/users.repository';
 import { toPublicUser } from '../utils/users.mapper';
@@ -15,17 +12,7 @@ import { toPublicUser } from '../utils/users.mapper';
 export class UpdateUserService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
-  async update(
-    currentUser: AuthUser,
-    targetUserId: string,
-    dto: UpdateUserDto,
-  ) {
-    const isAdmin = currentUser.role === ROLES.ADMIN;
-
-    if (!isAdmin) {
-      throw new ForbiddenException(AUTH_MESSAGES.FORBIDDEN);
-    }
-
+  async update(targetUserId: string, dto: UpdateUserDto) {
     if (dto.name === undefined && dto.avatarUrl === undefined) {
       throw new BadRequestException(AUTH_MESSAGES.NO_FIELDS_TO_UPDATE);
     }

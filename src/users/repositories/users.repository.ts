@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { normalizeEmail } from 'src/common/utils/email.util';
 import { db, type DbTransaction } from 'src/db';
 import {
@@ -143,18 +143,34 @@ export class UsersRepository {
   async unbanUser(
     userId: string,
     executor: DbExecutor = db,
-  ): Promise<UserWithRole | null> {
-    await executor.delete(userBans).where(eq(userBans.userId, userId));
-
-    const [user] = await executor
+  ): Promise<{
+    user: UserWithRole | null;
+    status: 'SUCCESS' | 'NOT_FOUND' | 'NOT_BANNED';
+  }> {
+    const [updatedUser] = await executor
       .update(users)
       .set({
         isBanned: false,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, userId))
+      .where(and(eq(users.id, userId), eq(users.isBanned, true)))
       .returning();
 
-    return user ?? null;
+    if (updatedUser) {
+      await executor.delete(userBans).where(eq(userBans.userId, userId));
+      return { user: updatedUser, status: 'SUCCESS' };
+    }
+
+    const [userExists] = await executor
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!userExists) {
+      return { user: null, status: 'NOT_FOUND' };
+    }
+
+    return { user: null, status: 'NOT_BANNED' };
   }
 }

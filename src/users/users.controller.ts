@@ -94,11 +94,10 @@ export class UsersController {
     format: 'uuid',
   })
   update(
-    @User() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return this.updateUserService.update(user, id, updateUserDto);
+    return this.updateUserService.update(id, updateUserDto);
   }
 
   @Delete('me')
@@ -130,8 +129,8 @@ export class UsersController {
     description: 'UUID of the user to delete',
     format: 'uuid',
   })
-  delete(@User() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.deleteUserService.delete(user, id);
+  delete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.deleteUserService.delete(id);
   }
 
   @Post(':id/ban')
@@ -172,7 +171,7 @@ export class UsersController {
     description: 'UUID of the user to unban',
     format: 'uuid',
   })
-  unban(@User() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.unbanUserService.unban(user, id);
+  unban(@Param('id', ParseUUIDPipe) id: string) {
+    return this.unbanUserService.unban(id);
   }
 }
