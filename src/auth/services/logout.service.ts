@@ -7,10 +7,8 @@ import { TokensService } from 'src/tokens/tokens.service';
 export class LogoutService {
   constructor(private readonly tokensService: TokensService) {}
 
-  logout(userId: string, res: Response, refreshToken?: string) {
-    void this.tokensService
-      .revokeCurrentSession(refreshToken, userId)
-      .catch(() => undefined);
+  async logout(userId: string, res: Response, refreshToken?: string) {
+    await this.tokensService.revokeCurrentSession(refreshToken, userId);
     this.tokensService.clearRefreshTokenCookie(res);
 
     return { message: AUTH_MESSAGES.LOGOUT_SUCCESS };

@@ -26,9 +26,11 @@ export class RevokeSessionService {
       throw new NotFoundException(AUTH_MESSAGES.SESSION_NOT_FOUND);
     }
 
-    const payload = this.tokensService.decodeRefreshToken(refreshToken);
     const currentSessionId =
-      payload && payload.sub === userId ? payload.sid : null;
+      await this.tokensService.getSessionIdFromRefreshToken(
+        refreshToken,
+        userId,
+      );
 
     if (currentSessionId === session.id) {
       this.tokensService.clearRefreshTokenCookie(res);

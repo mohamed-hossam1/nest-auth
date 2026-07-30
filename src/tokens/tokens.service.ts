@@ -185,19 +185,6 @@ export class TokensService {
     }
   }
 
-  decodeRefreshToken(
-    refreshToken: string | undefined,
-  ): RefreshJwtPayload | null {
-    if (!refreshToken) {
-      return null;
-    }
-    try {
-      return this.jwtService.decode<RefreshJwtPayload>(refreshToken);
-    } catch {
-      return null;
-    }
-  }
-
   async revokeCurrentSession(
     refreshToken: string | undefined,
     userId: string,

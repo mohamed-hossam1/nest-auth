@@ -16,9 +16,11 @@ export class ListSessionsService {
     userId: string,
     refreshToken?: string,
   ): Promise<{ sessions: SessionResponseDto[] }> {
-    const payload = this.tokensService.decodeRefreshToken(refreshToken);
     const currentSessionId =
-      payload && payload.sub === userId ? payload.sid : null;
+      await this.tokensService.getSessionIdFromRefreshToken(
+        refreshToken,
+        userId,
+      );
 
     const sessions =
       await this.refreshSessionsRepository.findActiveByUserId(userId);
