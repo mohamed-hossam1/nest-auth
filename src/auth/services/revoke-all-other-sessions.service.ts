@@ -52,6 +52,9 @@ export class RevokeAllOtherSessionsService {
 
     const isValid = compareSha256(refreshToken, session.tokenHash);
     if (!isValid) {
+      await this.refreshSessionsRepository.update(session.id, {
+        revokedAt: new Date(),
+      });
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 

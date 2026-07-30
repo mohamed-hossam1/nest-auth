@@ -26,13 +26,22 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  setupSwagger(app);
+  const isSwaggerEnabled =
+    configService.get<string>('SWAGGER_ENABLED') === 'true';
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+  const showSwagger = isSwaggerEnabled || !isProduction;
+
+  if (showSwagger) {
+    setupSwagger(app);
+  }
 
   const port = configService.get<number>('PORT') ?? 5000;
 
   await app.listen(port);
 
   console.log(`Application running on http://localhost:${port}/api`);
-  console.log(`Swagger docs at http://localhost:${port}/api/docs`);
+  if (showSwagger) {
+    console.log(`Swagger docs at http://localhost:${port}/api/docs`);
+  }
 }
 void bootstrap();

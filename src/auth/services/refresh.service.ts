@@ -34,10 +34,12 @@ export class RefreshService {
         },
       );
     } catch {
+      this.tokensService.clearRefreshTokenCookie(res);
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
     if (!payload.sid) {
+      this.tokensService.clearRefreshTokenCookie(res);
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
@@ -49,6 +51,7 @@ export class RefreshService {
       result.session.revokedAt ||
       new Date(result.session.expiresAt).getTime() < Date.now()
     ) {
+      this.tokensService.clearRefreshTokenCookie(res);
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
@@ -59,10 +62,12 @@ export class RefreshService {
       await this.refreshSessionsRepository.update(session.id, {
         revokedAt: new Date(),
       });
+      this.tokensService.clearRefreshTokenCookie(res);
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
     if (!user.isVerified) {
+      this.tokensService.clearRefreshTokenCookie(res);
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
