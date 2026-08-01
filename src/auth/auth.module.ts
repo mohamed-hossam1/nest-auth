@@ -18,6 +18,8 @@ import { ResetPasswordService } from './services/reset-password.service';
 import { ChangePasswordService } from './services/change-password.service';
 import { RefreshService } from './services/refresh.service';
 import { ResendVerificationEmailService } from './services/resend-verification-email.service';
+import { GoogleOauthLoginService } from './services/google-oauth-login.service';
+import { GoogleOauthCallbackService } from './services/google-oauth-callback.service';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { ResendVerificationEmailService } from './services/resend-verification-e
     ChangePasswordService,
     RefreshService,
     ResendVerificationEmailService,
+    GoogleOauthLoginService,
+    GoogleOauthCallbackService,
     AuthGuard,
   ],
 })

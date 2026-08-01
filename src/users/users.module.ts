@@ -12,6 +12,7 @@ import { UsersController } from './users.controller';
 import { UsersRepository } from './repositories/users.repository';
 import { RefreshSessionsRepository } from './repositories/refresh-sessions.repository';
 import { AuthTokensRepository } from './repositories/auth-tokens.repository';
+import { OauthAccountsRepository } from './repositories/oauth-accounts.repository';
 
 @Module({
   imports: [forwardRef(() => TokensModule)],
@@ -20,6 +21,7 @@ import { AuthTokensRepository } from './repositories/auth-tokens.repository';
     UsersRepository,
     RefreshSessionsRepository,
     AuthTokensRepository,
+    OauthAccountsRepository,
     DeleteUserService,
     DeleteMeService,
     UpdateUserService,
@@ -29,6 +31,11 @@ import { AuthTokensRepository } from './repositories/auth-tokens.repository';
     AuthGuard,
     RolesGuard,
   ],
-  exports: [UsersRepository, RefreshSessionsRepository, AuthTokensRepository],
+  exports: [
+    UsersRepository,
+    RefreshSessionsRepository,
+    AuthTokensRepository,
+    OauthAccountsRepository,
+  ],
 })
 export class UsersModule {}
