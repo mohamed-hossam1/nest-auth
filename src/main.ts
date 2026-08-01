@@ -1,8 +1,47 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { setupSwagger } from './swagger-setup';
+import cookieParser from 'cookie-parser';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+
+  const configService = app.get(ConfigService);
+
+  app.use(cookieParser());
+
+  app.setGlobalPrefix('api');
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  app.useGlobalFilters(new HttpExceptionFilter());
+
+  const isSwaggerEnabled =
+    configService.get<string>('SWAGGER_ENABLED') === 'true';
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+  const showSwagger = isSwaggerEnabled || !isProduction;
+
+  if (showSwagger) {
+    setupSwagger(app);
+  }
+
+  const port = configService.get<number>('PORT') ?? 5000;
+
+  await app.listen(port);
+
+  console.log(`Application running on http://localhost:${port}/api`);
+  if (showSwagger) {
+    console.log(`Swagger docs at http://localhost:${port}/api/docs`);
+  }
 }
-bootstrap();
+void bootstrap();
