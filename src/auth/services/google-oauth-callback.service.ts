@@ -125,7 +125,7 @@ export class GoogleOauthCallbackService {
         user = await this.usersRepository.findByEmail(email, tx);
 
         if (user) {
-          await this.oauthAccountsRepository.create(
+          await this.oauthAccountsRepository.createIdempotent(
             {
               userId: user.id,
               provider: 'google',
@@ -149,7 +149,7 @@ export class GoogleOauthCallbackService {
             }
           }
         } else {
-          user = await this.usersRepository.create(
+          user = await this.usersRepository.createIdempotent(
             {
               email,
               name: name ?? null,
@@ -160,7 +160,14 @@ export class GoogleOauthCallbackService {
             tx,
           );
 
-          await this.oauthAccountsRepository.create(
+          if (!user) {
+            user = await this.usersRepository.findByEmail(email, tx);
+            if (!user) {
+              throw new Error('User creation failed');
+            }
+          }
+
+          await this.oauthAccountsRepository.createIdempotent(
             {
               userId: user.id,
               provider: 'google',
@@ -169,6 +176,17 @@ export class GoogleOauthCallbackService {
             tx,
           );
         }
+
+        const finalMatch =
+          await this.oauthAccountsRepository.findUserByProvider(
+            'google',
+            sub,
+            tx,
+          );
+        if (!finalMatch) {
+          throw new Error('OAuth authentication failed');
+        }
+        user = finalMatch.user;
       }
 
       return user;

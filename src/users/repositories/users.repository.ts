@@ -65,6 +65,22 @@ export class UsersRepository {
     return user;
   }
 
+  async createIdempotent(
+    data: NewUser,
+    executor: DbExecutor = db,
+  ): Promise<UserWithRole | null> {
+    const [user] = await executor
+      .insert(users)
+      .values({
+        ...data,
+        email: normalizeEmail(data.email),
+      })
+      .onConflictDoNothing()
+      .returning();
+
+    return user ?? null;
+  }
+
   async update(
     id: string,
     data: Partial<NewUser>,

@@ -70,6 +70,19 @@ export class OauthAccountsRepository {
     return account;
   }
 
+  async createIdempotent(
+    data: NewOauthAccount,
+    executor: DbExecutor = db,
+  ): Promise<OauthAccount | null> {
+    const [account] = await executor
+      .insert(oauthAccounts)
+      .values(data)
+      .onConflictDoNothing()
+      .returning();
+
+    return account ?? null;
+  }
+
   async delete(
     id: string,
     executor: DbExecutor = db,
