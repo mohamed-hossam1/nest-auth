@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -42,6 +43,12 @@ import { ChangePasswordDto } from './dtos/change-password.dto';
 import { ChangePasswordService } from './services/change-password.service';
 import { RefreshService } from './services/refresh.service';
 import { ResendVerificationEmailService } from './services/resend-verification-email.service';
+import { GoogleOauthLoginService } from './services/google-oauth-login.service';
+import { GoogleOauthCallbackService } from './services/google-oauth-callback.service';
+import { ConfigService } from '@nestjs/config';
+import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { SetPasswordDto } from './dtos/set-password.dto';
+import { SetPasswordService } from './services/set-password.service';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -59,6 +66,10 @@ export class AuthController {
     private readonly refreshService: RefreshService,
     private readonly changePasswordService: ChangePasswordService,
     private readonly resendVerificationEmailService: ResendVerificationEmailService,
+    private readonly googleOauthLoginService: GoogleOauthLoginService,
+    private readonly googleOauthCallbackService: GoogleOauthCallbackService,
+    private readonly configService: ConfigService,
+    private readonly setPasswordService: SetPasswordService,
   ) {}
 
   @Post('sign-up')
@@ -212,5 +223,85 @@ export class AuthController {
     @Body() changePasswordDto: ChangePasswordDto,
   ) {
     return this.changePasswordService.changePassword(user, changePasswordDto);
+  }
+
+  @Post('set-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Set password for an account without one' })
+  setPassword(@User() user: AuthUser, @Body() setPasswordDto: SetPasswordDto) {
+    return this.setPasswordService.setPassword(user, setPasswordDto);
+  }
+
+  @Get('google')
+  @ApiOperation({ summary: 'Initiate Google OAuth login flow' })
+  async googleLogin(@Res() res: Response) {
+    const { url, state, codeVerifier } =
+      await this.googleOauthLoginService.generateAuthParams();
+
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+
+    res.cookie('oauth_state', state, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000,
+    });
+
+    res.cookie('oauth_code_verifier', codeVerifier, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000,
+    });
+
+    res.redirect(url);
+  }
+
+  @Get('google/callback')
+  @ApiOperation({ summary: 'Google OAuth callback handler' })
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
+    const state = req.query.state as string | undefined;
+    const code = req.query.code as string | undefined;
+
+    const cookieState = req.cookies?.oauth_state as string | undefined;
+    const cookieCodeVerifier = req.cookies?.oauth_code_verifier as
+      string | undefined;
+
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const clearCookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax' as const,
+    };
+    res.clearCookie('oauth_state', clearCookieOptions);
+    res.clearCookie('oauth_code_verifier', clearCookieOptions);
+
+    if (
+      !state ||
+      !cookieState ||
+      state !== cookieState ||
+      !cookieCodeVerifier ||
+      !code
+    ) {
+      throw new BadRequestException(AUTH_MESSAGES.OAUTH_VALIDATION_FAILED);
+    }
+
+    const appUrl =
+      this.configService.get<string>('APP_URL') ?? 'http://localhost:5000';
+    const currentUrl = new URL(req.url, appUrl);
+
+    await this.googleOauthCallbackService.handleCallback(
+      currentUrl,
+      cookieState,
+      cookieCodeVerifier,
+      res,
+      req,
+    );
+
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/oauth/callback`);
   }
 }

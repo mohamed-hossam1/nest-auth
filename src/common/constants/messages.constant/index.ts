@@ -12,6 +12,7 @@ import { USER_MESSAGES } from './user';
 import { BAN_USER_MESSAGES } from './ban-user';
 import { COMMON_MESSAGES } from './common';
 import { VALIDATION_MESSAGES } from './validation';
+import { OAUTH_MESSAGES } from './oauth';
 
 export const AUTH_MESSAGES = {
   ...SIGN_UP_MESSAGES,
@@ -27,6 +28,7 @@ export const AUTH_MESSAGES = {
   ...USER_MESSAGES,
   ...BAN_USER_MESSAGES,
   ...COMMON_MESSAGES,
+  ...OAUTH_MESSAGES,
 } as const;
 
 export { VALIDATION_MESSAGES };

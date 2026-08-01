@@ -6,6 +6,7 @@ import {
   timestamp,
   index,
   pgEnum,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 const timestamps = {
@@ -31,7 +32,7 @@ export const users = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     email: text('email').notNull().unique(),
-    passwordHash: text('password_hash').notNull(),
+    passwordHash: text('password_hash'),
     name: text('name'),
     avatarUrl: text('avatar_url'),
     role: userRoleEnum('role').notNull().default('user'),
@@ -110,6 +111,29 @@ export const refreshSessions = pgTable(
   ],
 );
 
+export const oauthAccounts = pgTable(
+  'oauth_accounts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    providerUserId: text('provider_user_id').notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('oauth_accounts_provider_provider_user_id_key').on(
+      table.provider,
+      table.providerUserId,
+    ),
+    uniqueIndex('oauth_accounts_user_id_provider_key').on(
+      table.userId,
+      table.provider,
+    ),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
@@ -128,3 +152,6 @@ export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 
 export type RefreshSession = typeof refreshSessions.$inferSelect;
 export type NewRefreshSession = typeof refreshSessions.$inferInsert;
+
+export type OauthAccount = typeof oauthAccounts.$inferSelect;
+export type NewOauthAccount = typeof oauthAccounts.$inferInsert;
