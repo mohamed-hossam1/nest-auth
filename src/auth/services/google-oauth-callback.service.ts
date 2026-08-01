@@ -57,9 +57,21 @@ export class GoogleOauthCallbackService {
       throw new Error(AUTH_MESSAGES.OAUTH_VALIDATION_FAILED);
     }
 
+    if (typeof claims.sub !== 'string' || claims.sub.length === 0) {
+      throw new Error(AUTH_MESSAGES.OAUTH_VALIDATION_FAILED);
+    }
+
+    if (typeof claims.email !== 'string' || claims.email.length === 0) {
+      throw new Error(AUTH_MESSAGES.OAUTH_VALIDATION_FAILED);
+    }
+
+    if (claims.email_verified !== true) {
+      throw new Error(AUTH_MESSAGES.OAUTH_VALIDATION_FAILED);
+    }
+
     return {
       sub: claims.sub,
-      email: claims.email as string,
+      email: claims.email,
       name: claims.name as string | undefined,
       picture: claims.picture as string | undefined,
     };

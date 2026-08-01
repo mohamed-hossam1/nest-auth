@@ -292,7 +292,7 @@ export class AuthController {
       this.configService.get<string>('APP_URL') ?? 'http://localhost:5000';
     const currentUrl = new URL(req.url, appUrl);
 
-    const sessionResult = await this.googleOauthCallbackService.handleCallback(
+    await this.googleOauthCallbackService.handleCallback(
       currentUrl,
       cookieState,
       cookieCodeVerifier,
@@ -302,8 +302,6 @@ export class AuthController {
 
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
-    res.redirect(
-      `${frontendUrl}/oauth/callback?accessToken=${sessionResult.accessToken}`,
-    );
+    res.redirect(`${frontendUrl}/oauth/callback`);
   }
 }

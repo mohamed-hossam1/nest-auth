@@ -18,12 +18,13 @@ export class SignInService {
   async signIn(signInDto: SignInDto, res: Response, req?: Request) {
     const user = await this.usersRepository.findByEmail(signInDto.email);
 
+    const hasPassword = !!user?.passwordHash;
     const passwordValid = await this.hashingService.compare(
       signInDto.password,
       user?.passwordHash ?? AUTH_CONFIG.DUMMY_PASSWORD_HASH,
     );
 
-    if (!user || !passwordValid) {
+    if (!user || !hasPassword || !passwordValid) {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_CREDENTIALS);
     }
 
