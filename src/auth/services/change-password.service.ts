@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -30,6 +31,10 @@ export class ChangePasswordService {
 
     if (!existingUser) {
       throw new UnauthorizedException(AUTH_MESSAGES.USER_NOT_FOUND);
+    }
+
+    if (!existingUser.passwordHash) {
+      throw new BadRequestException(AUTH_MESSAGES.PASSWORD_NOT_SET);
     }
 
     const passwordValid = await this.hashingService.compare(

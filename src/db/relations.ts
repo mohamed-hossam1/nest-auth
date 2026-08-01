@@ -19,6 +19,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.userBans.userId,
     }),
+    oauthAccounts: r.many.oauthAccounts({
+      from: r.users.id,
+      to: r.oauthAccounts.userId,
+    }),
   },
   userBans: {
     user: r.one.users({
@@ -44,6 +48,13 @@ export const relations = defineRelations(schema, (r) => ({
   refreshSessions: {
     user: r.one.users({
       from: r.refreshSessions.userId,
+      to: r.users.id,
+      optional: false,
+    }),
+  },
+  oauthAccounts: {
+    user: r.one.users({
+      from: r.oauthAccounts.userId,
       to: r.users.id,
       optional: false,
     }),
