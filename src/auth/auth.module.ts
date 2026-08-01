@@ -20,6 +20,7 @@ import { RefreshService } from './services/refresh.service';
 import { ResendVerificationEmailService } from './services/resend-verification-email.service';
 import { GoogleOauthLoginService } from './services/google-oauth-login.service';
 import { GoogleOauthCallbackService } from './services/google-oauth-callback.service';
+import { SetPasswordService } from './services/set-password.service';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { GoogleOauthCallbackService } from './services/google-oauth-callback.ser
     ResendVerificationEmailService,
     GoogleOauthLoginService,
     GoogleOauthCallbackService,
+    SetPasswordService,
     AuthGuard,
   ],
 })

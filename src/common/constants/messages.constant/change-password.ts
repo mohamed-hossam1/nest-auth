@@ -5,4 +5,6 @@ export const CHANGE_PASSWORD_MESSAGES = {
     'Current password and new password are the same',
   PASSWORD_NOT_SET:
     'Password is not set for this account. Please use set password.',
+  PASSWORD_ALREADY_SET: 'Password is already set for this account',
+  SET_PASSWORD_SUCCESS: 'Password has been set successfully',
 } as const;

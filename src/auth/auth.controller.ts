@@ -47,6 +47,8 @@ import { GoogleOauthLoginService } from './services/google-oauth-login.service';
 import { GoogleOauthCallbackService } from './services/google-oauth-callback.service';
 import { ConfigService } from '@nestjs/config';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { SetPasswordDto } from './dtos/set-password.dto';
+import { SetPasswordService } from './services/set-password.service';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -67,6 +69,7 @@ export class AuthController {
     private readonly googleOauthLoginService: GoogleOauthLoginService,
     private readonly googleOauthCallbackService: GoogleOauthCallbackService,
     private readonly configService: ConfigService,
+    private readonly setPasswordService: SetPasswordService,
   ) {}
 
   @Post('sign-up')
@@ -220,6 +223,15 @@ export class AuthController {
     @Body() changePasswordDto: ChangePasswordDto,
   ) {
     return this.changePasswordService.changePassword(user, changePasswordDto);
+  }
+
+  @Post('set-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Set password for an account without one' })
+  setPassword(@User() user: AuthUser, @Body() setPasswordDto: SetPasswordDto) {
+    return this.setPasswordService.setPassword(user, setPasswordDto);
   }
 
   @Get('google')
