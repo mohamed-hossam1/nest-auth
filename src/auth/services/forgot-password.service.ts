@@ -69,10 +69,12 @@ export class ForgotPasswordService {
     name: string | null,
     resetToken: string,
   ) {
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
     const passwordResetEmail = new PasswordResetEmail(
       email,
       name,
-      `${this.configService.get<string>('APP_URL')}/reset-password?token=${resetToken}`,
+      `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`,
     );
     void this.emailService.send(passwordResetEmail).catch(() => undefined);
   }

@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -92,6 +93,19 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.signInService.signIn(signInDto, res, req);
+  }
+
+  @Get('verify-email')
+  @ApiOperation({ summary: 'Redirect verification token link to frontend UI' })
+  verifyEmailRedirect(@Query('token') token: string, @Res() res: Response) {
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
+    if (token) {
+      return res.redirect(
+        `${frontendUrl}/verify?token=${encodeURIComponent(token)}`,
+      );
+    }
+    return res.redirect(`${frontendUrl}/verify`);
   }
 
   @Post('verify-email')

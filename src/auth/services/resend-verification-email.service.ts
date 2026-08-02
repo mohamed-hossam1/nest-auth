@@ -78,10 +78,12 @@ export class ResendVerificationEmailService {
     name: string | null,
     verifyToken: string,
   ) {
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
     const verificationEmail = new VerificationEmail(
       email,
       name,
-      `${this.configService.get<string>('APP_URL')}/verify-email?token=${encodeURIComponent(verifyToken)}`,
+      `${frontendUrl}/verify?token=${encodeURIComponent(verifyToken)}`,
     );
     void this.emailService.send(verificationEmail).catch(() => undefined);
   }
