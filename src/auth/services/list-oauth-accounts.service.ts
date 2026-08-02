@@ -8,8 +8,7 @@ export class ListOauthAccountsService {
   ) {}
 
   async listAccounts(userId: string) {
-    const accounts =
-      await this.oauthAccountsRepository.findByUserId(userId);
+    const accounts = await this.oauthAccountsRepository.findByUserId(userId);
 
     return accounts.map((acc) => ({
       id: acc.id,

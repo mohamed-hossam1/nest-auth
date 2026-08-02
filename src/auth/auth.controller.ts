@@ -323,10 +323,7 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Unlink an OAuth account' })
-  unlinkAccount(
-    @User() user: AuthUser,
-    @Body() dto: UnlinkOauthAccountDto,
-  ) {
+  unlinkAccount(@User() user: AuthUser, @Body() dto: UnlinkOauthAccountDto) {
     return this.unlinkOauthAccountService.unlinkAccount(user.id, dto.provider);
   }
 }

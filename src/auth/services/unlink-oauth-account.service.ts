@@ -19,8 +19,7 @@ export class UnlinkOauthAccountService {
       throw new NotFoundException('User not found');
     }
 
-    const accounts =
-      await this.oauthAccountsRepository.findByUserId(userId);
+    const accounts = await this.oauthAccountsRepository.findByUserId(userId);
     const targetAccount = accounts.find((acc) => acc.provider === provider);
 
     if (!targetAccount) {
