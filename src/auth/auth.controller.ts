@@ -49,6 +49,9 @@ import { ConfigService } from '@nestjs/config';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { SetPasswordDto } from './dtos/set-password.dto';
 import { SetPasswordService } from './services/set-password.service';
+import { ListOauthAccountsService } from './services/list-oauth-accounts.service';
+import { UnlinkOauthAccountService } from './services/unlink-oauth-account.service';
+import { UnlinkOauthAccountDto } from './dtos/unlink-oauth-account.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -70,6 +73,8 @@ export class AuthController {
     private readonly googleOauthCallbackService: GoogleOauthCallbackService,
     private readonly configService: ConfigService,
     private readonly setPasswordService: SetPasswordService,
+    private readonly listOauthAccountsService: ListOauthAccountsService,
+    private readonly unlinkOauthAccountService: UnlinkOauthAccountService,
   ) {}
 
   @Post('sign-up')
@@ -303,5 +308,25 @@ export class AuthController {
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
     res.redirect(`${frontendUrl}/oauth/callback`);
+  }
+
+  @Get('accounts')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List linked OAuth accounts for current user' })
+  listUserAccounts(@User() user: AuthUser) {
+    return this.listOauthAccountsService.listAccounts(user.id);
+  }
+
+  @Post('accounts/unlink')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unlink an OAuth account' })
+  unlinkAccount(
+    @User() user: AuthUser,
+    @Body() dto: UnlinkOauthAccountDto,
+  ) {
+    return this.unlinkOauthAccountService.unlinkAccount(user.id, dto.provider);
   }
 }

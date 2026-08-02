@@ -8,6 +8,7 @@ export type PublicUser = {
   role: User['role'];
   isVerified: boolean;
   isBanned: boolean;
+  hasPassword: boolean;
   ban: { bannedAt: Date; banReason: string } | null;
 };
 
@@ -20,6 +21,7 @@ export function toPublicUser(user: User, ban: UserBan | null): PublicUser {
     role: user.role,
     isVerified: user.isVerified,
     isBanned: user.isBanned,
+    hasPassword: user.passwordHash !== null,
     ban: ban
       ? {
           bannedAt: ban.bannedAt,

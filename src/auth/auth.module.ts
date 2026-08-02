@@ -21,6 +21,8 @@ import { ResendVerificationEmailService } from './services/resend-verification-e
 import { GoogleOauthLoginService } from './services/google-oauth-login.service';
 import { GoogleOauthCallbackService } from './services/google-oauth-callback.service';
 import { SetPasswordService } from './services/set-password.service';
+import { ListOauthAccountsService } from './services/list-oauth-accounts.service';
+import { UnlinkOauthAccountService } from './services/unlink-oauth-account.service';
 
 @Module({
   imports: [
@@ -47,6 +49,8 @@ import { SetPasswordService } from './services/set-password.service';
     GoogleOauthLoginService,
     GoogleOauthCallbackService,
     SetPasswordService,
+    ListOauthAccountsService,
+    UnlinkOauthAccountService,
     AuthGuard,
   ],
 })

@@ -36,6 +36,16 @@ export class OauthAccountsRepository {
     return result ?? null;
   }
 
+  async findByUserId(
+    userId: string,
+    executor: DbExecutor = db,
+  ): Promise<OauthAccount[]> {
+    return executor
+      .select()
+      .from(oauthAccounts)
+      .where(eq(oauthAccounts.userId, userId));
+  }
+
   async findByUserIdAndProvider(
     userId: string,
     provider: string,
