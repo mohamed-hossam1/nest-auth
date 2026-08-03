@@ -237,12 +237,18 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
   @ApiOperation({ summary: 'Change the authenticated user password' })
   changePassword(
     @User() user: AuthUser,
     @Body() changePasswordDto: ChangePasswordDto,
+    @Req() req: Request,
   ) {
-    return this.changePasswordService.changePassword(user, changePasswordDto);
+    return this.changePasswordService.changePassword(
+      user,
+      changePasswordDto,
+      req.cookies?.refresh_token,
+    );
   }
 
   @Post('set-password')
@@ -279,6 +285,42 @@ export class AuthController {
     res.redirect(url);
   }
 
+  @Get('google/link')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({ summary: 'Initiate Google OAuth account linking flow' })
+  async googleLink(
+    @User() user: AuthUser,
+    @Res() res: Response,
+    @Req() req: Request,
+  ) {
+    const { url, state, codeVerifier } =
+      await this.googleOauthLoginService.generateAuthParams();
+
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax' as const,
+      maxAge: 10 * 60 * 1000,
+    };
+
+    res.cookie('oauth_state', state, cookieOptions);
+    res.cookie('oauth_code_verifier', codeVerifier, cookieOptions);
+    res.cookie('oauth_action', 'link', cookieOptions);
+    res.cookie('oauth_link_user_id', user.id, cookieOptions);
+
+    if (
+      req.headers.accept?.includes('application/json') ||
+      req.headers['x-requested-with'] === 'XMLHttpRequest'
+    ) {
+      return res.status(200).json({ url });
+    }
+
+    res.redirect(url);
+  }
+
   @Get('google/callback')
   @ApiOperation({ summary: 'Google OAuth callback handler' })
   async googleCallback(@Req() req: Request, @Res() res: Response) {
@@ -287,6 +329,9 @@ export class AuthController {
 
     const cookieState = req.cookies?.oauth_state as string | undefined;
     const cookieCodeVerifier = req.cookies?.oauth_code_verifier as
+      string | undefined;
+    const oauthAction = req.cookies?.oauth_action as string | undefined;
+    const oauthLinkUserId = req.cookies?.oauth_link_user_id as
       string | undefined;
 
     const isProduction = this.configService.get('NODE_ENV') === 'production';
@@ -297,6 +342,8 @@ export class AuthController {
     };
     res.clearCookie('oauth_state', clearCookieOptions);
     res.clearCookie('oauth_code_verifier', clearCookieOptions);
+    res.clearCookie('oauth_action', clearCookieOptions);
+    res.clearCookie('oauth_link_user_id', clearCookieOptions);
 
     if (
       !state ||
@@ -311,6 +358,16 @@ export class AuthController {
     const appUrl =
       this.configService.get<string>('APP_URL') ?? 'http://localhost:5000';
     const currentUrl = new URL(req.url, appUrl);
+
+    if (oauthAction === 'link' && oauthLinkUserId) {
+      return this.googleOauthCallbackService.handleLinkCallback(
+        currentUrl,
+        cookieState,
+        cookieCodeVerifier,
+        oauthLinkUserId,
+        res,
+      );
+    }
 
     await this.googleOauthCallbackService.handleCallback(
       currentUrl,

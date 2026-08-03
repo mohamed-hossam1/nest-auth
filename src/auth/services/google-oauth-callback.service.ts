@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as client from 'openid-client';
 import { UsersRepository } from 'src/users/repositories/users.repository';
@@ -202,5 +206,96 @@ export class GoogleOauthCallbackService {
         ipAddress: getClientIp(req.headers['x-forwarded-for'], req.ip),
       },
     );
+  }
+
+  async handleLinkCallback(
+    currentUrl: URL,
+    expectedState: string,
+    pkceCodeVerifier: string,
+    linkingUserId: string,
+    res: Response,
+  ) {
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
+
+    let claims;
+    try {
+      claims = await this.getGoogleUserClaims(
+        currentUrl,
+        expectedState,
+        pkceCodeVerifier,
+      );
+    } catch {
+      return res.redirect(
+        `${frontendUrl}/oauth/callback?error=oauth_validation_failed`,
+      );
+    }
+
+    const { sub, email, name, picture } = claims;
+
+    try {
+      await db.transaction(async (tx) => {
+        const currentUser = await this.usersRepository.findById(
+          linkingUserId,
+          tx,
+        );
+
+        if (!currentUser) {
+          throw new ConflictException('user_not_found');
+        }
+
+        if (
+          !email ||
+          email.trim().toLowerCase() !== currentUser.email.trim().toLowerCase()
+        ) {
+          throw new ConflictException('google_email_mismatch');
+        }
+
+        const match = await this.oauthAccountsRepository.findUserByProvider(
+          'google',
+          sub,
+          tx,
+        );
+
+        if (match) {
+          if (match.user.id !== linkingUserId) {
+            throw new ConflictException(
+              'google_already_linked_to_another_account',
+            );
+          }
+          return;
+        }
+
+        await this.oauthAccountsRepository.createIdempotent(
+          {
+            userId: linkingUserId,
+            provider: 'google',
+            providerUserId: sub,
+          },
+          tx,
+        );
+
+        const updates: Partial<typeof currentUser> = {};
+        if (!currentUser.name && name) updates.name = name;
+        if (!currentUser.avatarUrl && picture) updates.avatarUrl = picture;
+        if (Object.keys(updates).length > 0) {
+          await this.usersRepository.update(linkingUserId, updates, tx);
+        }
+      });
+    } catch (err: any) {
+      if (err?.message === 'google_email_mismatch') {
+        return res.redirect(
+          `${frontendUrl}/oauth/callback?error=google_email_mismatch`,
+        );
+      }
+      if (err?.message === 'google_already_linked_to_another_account') {
+        return res.redirect(
+          `${frontendUrl}/oauth/callback?error=google_already_linked_to_another_account`,
+        );
+      }
+      return res.redirect(`${frontendUrl}/oauth/callback?error=link_failed`);
+    }
+
+    return res.redirect(`${frontendUrl}/oauth/callback?status=linked`);
   }
 }

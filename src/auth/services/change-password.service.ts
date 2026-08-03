@@ -11,6 +11,7 @@ import { UsersRepository } from 'src/users/repositories/users.repository';
 import { RefreshSessionsRepository } from 'src/users/repositories/refresh-sessions.repository';
 import { ChangePasswordDto } from '../dtos/change-password.dto';
 import { AuthUser } from 'src/common/types/auth-user.type';
+import { TokensService } from 'src/tokens/tokens.service';
 
 @Injectable()
 export class ChangePasswordService {
@@ -18,9 +19,14 @@ export class ChangePasswordService {
     private readonly usersRepository: UsersRepository,
     private readonly refreshSessionsRepository: RefreshSessionsRepository,
     private readonly hashingService: HashingService,
+    private readonly tokensService: TokensService,
   ) {}
 
-  async changePassword(user: AuthUser, changePasswordDto: ChangePasswordDto) {
+  async changePassword(
+    user: AuthUser,
+    changePasswordDto: ChangePasswordDto,
+    refreshToken?: string,
+  ) {
     if (changePasswordDto.oldPassword === changePasswordDto.newPassword) {
       throw new ConflictException(
         AUTH_MESSAGES.CURRENT_PASSWORD_AND_NEW_PASSWORD_ARE_THE_SAME,
@@ -52,7 +58,22 @@ export class ChangePasswordService {
 
     await db.transaction(async (tx) => {
       await this.usersRepository.update(existingUser.id, { passwordHash }, tx);
-      await this.refreshSessionsRepository.revokeAll(existingUser.id, tx);
+
+      if (changePasswordDto.revokeOtherSessions) {
+        const currentSessionId =
+          await this.tokensService.getSessionIdFromRefreshToken(
+            refreshToken,
+            existingUser.id,
+          );
+
+        if (currentSessionId) {
+          await this.refreshSessionsRepository.revokeAllExcept(
+            existingUser.id,
+            currentSessionId,
+            tx,
+          );
+        }
+      }
     });
 
     return { message: AUTH_MESSAGES.CHANGE_PASSWORD_SUCCESS };
