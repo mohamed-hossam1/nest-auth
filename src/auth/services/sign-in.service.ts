@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AUTH_CONFIG } from 'src/common/constants/auth.constant';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { getClientIp } from 'src/common/utils/request.util';
 import { HashingService } from 'src/hashing/hashing.service';
 import { TokensService } from 'src/tokens/tokens.service';
 import { UsersRepository } from 'src/users/repositories/users.repository';
@@ -38,7 +39,7 @@ export class SignInService {
       AUTH_MESSAGES.SIGN_IN_SUCCESS,
       {
         userAgent: req?.headers['user-agent'] ?? null,
-        ipAddress: req?.ip ?? null,
+        ipAddress: getClientIp(req?.headers['x-forwarded-for'], req?.ip),
       },
     );
   }

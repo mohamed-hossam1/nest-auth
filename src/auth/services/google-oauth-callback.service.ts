@@ -7,6 +7,7 @@ import { TokensService } from 'src/tokens/tokens.service';
 import { db } from 'src/db';
 import type { Request, Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import { getClientIp } from 'src/common/utils/request.util';
 
 @Injectable()
 export class GoogleOauthCallbackService {
@@ -198,7 +199,7 @@ export class GoogleOauthCallbackService {
       AUTH_MESSAGES.OAUTH_LOGIN_SUCCESS,
       {
         userAgent: req.headers['user-agent'] ?? null,
-        ipAddress: req.ip ?? null,
+        ipAddress: getClientIp(req.headers['x-forwarded-for'], req.ip),
       },
     );
   }

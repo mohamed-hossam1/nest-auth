@@ -34,6 +34,7 @@ import { DeleteMeService } from './services/delete-me.service';
 import { UpdateUserService } from './services/update-user.service';
 import { UpdateMeService } from './services/update-me.service';
 import { ROLES } from 'src/db/schema';
+import { UsersRepository } from './repositories/users.repository';
 
 @ApiTags('users')
 @Controller('users')
@@ -45,13 +46,16 @@ export class UsersController {
     private readonly updateMeService: UpdateMeService,
     private readonly banUserService: BanUserService,
     private readonly unbanUserService: UnbanUserService,
+    private readonly usersRepository: UsersRepository,
   ) {}
 
   @Get('me')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user profile' })
-  me(@User() user: AuthUser) {
+  async me(@User() user: AuthUser) {
+    const currentUser = await this.usersRepository.findById(user.id);
+
     return {
       user: {
         id: user.id,
@@ -61,6 +65,7 @@ export class UsersController {
         role: user.role,
         isVerified: user.isVerified,
         isBanned: user.isBanned,
+        hasPassword: Boolean(currentUser?.passwordHash),
         ban: null,
       },
     };

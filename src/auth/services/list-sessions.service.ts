@@ -41,6 +41,7 @@ export class ListSessionsService {
     return {
       sessionId: session.id,
       deviceName: session.deviceName,
+      userAgent: session.userAgent,
       browser,
       operatingSystem,
       ipAddress: session.ipAddress,

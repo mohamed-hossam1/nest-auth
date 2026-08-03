@@ -45,7 +45,14 @@ export class VerifyEmailService {
 
     if (user.isVerified) {
       await this.authTokensRepository.deleteEmailVerificationToken(user.id);
-      return { message: AUTH_MESSAGES.EMAIL_ALREADY_VERIFIED };
+      // Verification links are intentionally idempotent. If the token is
+      // opened again (or the first response was lost), restore the session so
+      // the user is not left on the verification screen without auth cookies.
+      return this.tokensService.issueAuthSession(
+        user,
+        res,
+        AUTH_MESSAGES.EMAIL_ALREADY_VERIFIED,
+      );
     }
 
     if (user.isBanned) {
