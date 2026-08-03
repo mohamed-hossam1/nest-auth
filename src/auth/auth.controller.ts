@@ -117,9 +117,10 @@ export class AuthController {
   })
   verifyEmail(
     @Body() verifyEmailDto: VerifyEmailDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.verifyEmailService.verifyEmail(verifyEmailDto.token, res);
+    return this.verifyEmailService.verifyEmail(verifyEmailDto.token, res, req);
   }
 
   @Post('resend-verification-email')
@@ -142,7 +143,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh access token using refresh cookie' })
   @ApiCookieAuth('refresh_token')
   refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    return this.refreshService.refresh(req.cookies?.refresh_token, res);
+    return this.refreshService.refresh(req.cookies?.refresh_token, res, req);
   }
 
   @Post('logout')

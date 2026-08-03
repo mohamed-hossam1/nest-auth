@@ -21,7 +21,6 @@ export type RefreshJwtPayload = JwtPayload & {
 };
 
 export type SessionMeta = {
-  deviceName?: string | null;
   userAgent?: string | null;
   ipAddress?: string | null;
 };
@@ -129,13 +128,15 @@ export class TokensService {
     const accessToken = await this.generateAccessToken(user);
     const refreshTokenHash = hashSha256(refreshToken);
 
+    const userAgent = meta.userAgent ?? null;
+    const ipAddress = meta.ipAddress ?? null;
+
     await this.refreshSessionsRepository.create({
       id: sessionId,
       userId: user.id,
       tokenHash: refreshTokenHash,
-      deviceName: meta.deviceName ?? null,
-      userAgent: meta.userAgent ?? null,
-      ipAddress: meta.ipAddress ?? null,
+      userAgent,
+      ipAddress,
       expiresAt,
     });
 

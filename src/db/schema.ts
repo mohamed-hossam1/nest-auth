@@ -98,7 +98,6 @@ export const refreshSessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     tokenHash: text('token_hash').notNull(),
-    deviceName: text('device_name'),
     userAgent: text('user_agent'),
     ipAddress: text('ip_address'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),

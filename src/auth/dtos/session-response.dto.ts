@@ -7,12 +7,6 @@ export class SessionResponseDto {
   sessionId: string;
 
   @ApiPropertyOptional({
-    example: 'MacBook Pro',
-    nullable: true,
-  })
-  deviceName: string | null;
-
-  @ApiPropertyOptional({
     example:
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/150.0.0.0 Safari/537.36',
     nullable: true,

@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Response } from 'express';
+import type { Request, Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { assertUserNotBanned } from 'src/common/utils/ban.util';
 import { compareSha256, hashSha256 } from 'src/common/utils/sha256.util';
@@ -9,6 +9,7 @@ import { db } from 'src/db';
 import { TokensService, RefreshJwtPayload } from 'src/tokens/tokens.service';
 import { UsersRepository } from 'src/users/repositories/users.repository';
 import { RefreshSessionsRepository } from 'src/users/repositories/refresh-sessions.repository';
+import { getClientIp } from 'src/common/utils/request.util';
 
 @Injectable()
 export class RefreshService {
@@ -20,7 +21,11 @@ export class RefreshService {
     private readonly configService: ConfigService,
   ) {}
 
-  async refresh(refreshToken: string | undefined, res: Response) {
+  async refresh(
+    refreshToken: string | undefined,
+    res: Response,
+    req?: Request,
+  ) {
     if (!refreshToken) {
       throw new UnauthorizedException(AUTH_MESSAGES.INVALID_REFRESH_TOKEN);
     }
@@ -85,6 +90,12 @@ export class RefreshService {
       Date.now() + this.tokensService.getRefreshTokenTtlMs(),
     );
 
+    const userAgent = req?.headers['user-agent'] ?? session.userAgent ?? null;
+    const ipAddress =
+      getClientIp(req?.headers['x-forwarded-for'], req?.ip) ??
+      session.ipAddress ??
+      null;
+
     const tokens = await db.transaction(async (tx) => {
       const newRefreshToken = await this.tokensService.generateRefreshToken(
         user,
@@ -98,6 +109,8 @@ export class RefreshService {
         {
           tokenHash,
           expiresAt,
+          userAgent,
+          ipAddress,
           revokedAt: null,
         },
         tx,

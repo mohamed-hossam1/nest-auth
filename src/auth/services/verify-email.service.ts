@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Response } from 'express';
+import type { Request, Response } from 'express';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
 import { assertUserNotBanned } from 'src/common/utils/ban.util';
 import { db } from 'src/db';
@@ -8,6 +8,7 @@ import { UsersRepository } from 'src/users/repositories/users.repository';
 import { AuthTokensRepository } from 'src/users/repositories/auth-tokens.repository';
 import { parseToken } from '../utils/token.util';
 import { compareSha256 } from 'src/common/utils/sha256.util';
+import { getClientIp } from 'src/common/utils/request.util';
 
 @Injectable()
 export class VerifyEmailService {
@@ -17,7 +18,7 @@ export class VerifyEmailService {
     private readonly tokensService: TokensService,
   ) {}
 
-  async verifyEmail(token: string, res: Response) {
+  async verifyEmail(token: string, res: Response, req?: Request) {
     if (!token) {
       throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
     }
@@ -43,15 +44,18 @@ export class VerifyEmailService {
       throw new BadRequestException(AUTH_MESSAGES.INVALID_VERIFY_TOKEN);
     }
 
+    const meta = {
+      userAgent: req?.headers['user-agent'] ?? null,
+      ipAddress: getClientIp(req?.headers['x-forwarded-for'], req?.ip),
+    };
+
     if (user.isVerified) {
       await this.authTokensRepository.deleteEmailVerificationToken(user.id);
-      // Verification links are intentionally idempotent. If the token is
-      // opened again (or the first response was lost), restore the session so
-      // the user is not left on the verification screen without auth cookies.
       return this.tokensService.issueAuthSession(
         user,
         res,
         AUTH_MESSAGES.EMAIL_ALREADY_VERIFIED,
+        meta,
       );
     }
 
@@ -86,6 +90,7 @@ export class VerifyEmailService {
       verifiedUser,
       res,
       AUTH_MESSAGES.EMAIL_VERIFIED_SUCCESS,
+      meta,
     );
   }
 }
