@@ -1,6 +1,6 @@
 import 'dotenv/config';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { setupSwagger } from './swagger-setup';
 import cookieParser from 'cookie-parser';
@@ -8,6 +8,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
@@ -39,9 +40,9 @@ async function bootstrap() {
 
   await app.listen(port);
 
-  console.log(`Application running on http://localhost:${port}/api`);
+  logger.log(`Application running on http://localhost:${port}/api`);
   if (showSwagger) {
-    console.log(`Swagger docs at http://localhost:${port}/api/docs`);
+    logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
   }
 }
 void bootstrap();
