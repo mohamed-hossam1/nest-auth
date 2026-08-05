@@ -9,6 +9,7 @@ import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import type { Request, Response } from 'express';
 import { RedisService } from '../redis/redis.service';
+import { AUTH_MESSAGES } from '../constants/messages.constant';
 
 interface CachedResponse {
   statusCode: number;
@@ -43,9 +44,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     const existing = await this.redisService.get(redisKey);
 
     if (existing === 'IN_PROGRESS') {
-      throw new ConflictException(
-        'A request with this Idempotency-Key is currently being processed.',
-      );
+      throw new ConflictException(AUTH_MESSAGES.REQUEST_IN_PROGRESS);
     }
 
     if (existing) {
@@ -64,9 +63,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
       30,
     );
     if (!acquired) {
-      throw new ConflictException(
-        'A request with this Idempotency-Key is currently being processed.',
-      );
+      throw new ConflictException(AUTH_MESSAGES.REQUEST_IN_PROGRESS);
     }
 
     return next.handle().pipe(

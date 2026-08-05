@@ -43,7 +43,9 @@ export class AuthGuard implements CanActivate {
           secret: this.configService.get('JWT_ACCESS_SECRET'),
         });
         userId = payload.sub;
-      } catch {}
+      } catch {
+        // Ignore invalid access token error; fallback to refresh token check
+      }
     }
 
     if (!userId && request.cookies?.refresh_token) {
@@ -54,7 +56,9 @@ export class AuthGuard implements CanActivate {
           secret: this.configService.get('JWT_REFRESH_SECRET'),
         });
         userId = refreshPayload.sub;
-      } catch {}
+      } catch {
+        // Ignore invalid refresh token error; unauthenticated check below will handle missing userId
+      }
     }
 
     if (!userId) {
