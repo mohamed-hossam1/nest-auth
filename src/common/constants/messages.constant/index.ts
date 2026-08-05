@@ -31,4 +31,4 @@ export const AUTH_MESSAGES = {
   ...OAUTH_MESSAGES,
 } as const;
 
-export { VALIDATION_MESSAGES };
+export { COMMON_MESSAGES, VALIDATION_MESSAGES };
