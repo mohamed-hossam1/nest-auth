@@ -10,6 +10,7 @@ import {
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -18,6 +19,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { IdempotencyInterceptor } from '../common/interceptors/idempotency.interceptor';
 
 import { SignUpDto } from './dtos/sign-up.dto';
 import { SignInDto } from './dtos/sign-in.dto';
@@ -110,6 +112,7 @@ export class AuthController {
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(IdempotencyInterceptor)
   @ApiOperation({
     summary: 'Verify email address and auto sign in',
     description:
@@ -140,6 +143,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(IdempotencyInterceptor)
   @ApiOperation({ summary: 'Refresh access token using refresh cookie' })
   @ApiCookieAuth('refresh_token')
   refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
