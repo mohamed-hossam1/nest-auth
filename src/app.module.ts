@@ -7,10 +7,12 @@ import { EmailModule } from './email/email.module';
 import { AuthModule } from './auth/auth.module';
 import { HashingModule } from './hashing/hashing.module';
 import { TokensModule } from './tokens/tokens.module';
+import { RedisModule } from './common/redis/redis.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    RedisModule,
     UsersModule,
     EmailModule,
     AuthModule,
