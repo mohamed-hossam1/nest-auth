@@ -1,5 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  or,
+  ilike,
+  count,
+  asc,
+  desc,
+  isNull,
+  type SQL,
+} from 'drizzle-orm';
 import { normalizeEmail } from 'src/common/utils/email.util';
 import { db, type DbTransaction } from 'src/db';
 import {
@@ -121,17 +131,29 @@ export class UsersRepository {
     const [ban] = await executor
       .select()
       .from(userBans)
-      .where(eq(userBans.userId, userId))
+      .where(and(eq(userBans.userId, userId), isNull(userBans.unbannedAt)))
+      .orderBy(desc(userBans.bannedAt))
       .limit(1);
 
     return ban ?? null;
+  }
+
+  async findBanHistoryByUserId(
+    userId: string,
+    executor: DbExecutor = db,
+  ): Promise<UserBan[]> {
+    return await executor
+      .select()
+      .from(userBans)
+      .where(eq(userBans.userId, userId))
+      .orderBy(desc(userBans.bannedAt));
   }
 
   async banUser(
     userId: string,
     banReason: string,
     executor: DbExecutor = db,
-  ): Promise<{ user: UserWithRole; ban: UserBan }> {
+  ): Promise<{ user: UserWithRole; ban: UserBan; banHistory: UserBan[] }> {
     const [ban] = await executor
       .insert(userBans)
       .values({
@@ -153,7 +175,94 @@ export class UsersRepository {
       throw new Error('Failed to ban user');
     }
 
-    return { user, ban };
+    const banHistory = await this.findBanHistoryByUserId(userId, executor);
+
+    return { user, ban, banHistory };
+  }
+
+  async findAllPaginated(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    status?: 'active' | 'banned';
+    role?: 'user' | 'admin';
+    sortBy: 'createdAt' | 'name' | 'email';
+    sortOrder: 'asc' | 'desc';
+  }): Promise<{
+    data: Array<{ user: UserWithRole; ban: UserBan | null }>;
+    total: number;
+  }> {
+    const conditions: SQL[] = [];
+
+    if (params.search && params.search.trim() !== '') {
+      const q = `%${params.search.trim()}%`;
+      const searchCondition = or(ilike(users.email, q), ilike(users.name, q));
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
+    }
+
+    if (params.status === 'active') {
+      conditions.push(eq(users.isBanned, false));
+    } else if (params.status === 'banned') {
+      conditions.push(eq(users.isBanned, true));
+    }
+
+    if (params.role) {
+      conditions.push(eq(users.role, params.role));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const sortColumn =
+      params.sortBy === 'name'
+        ? users.name
+        : params.sortBy === 'email'
+          ? users.email
+          : users.createdAt;
+    const orderFn = params.sortOrder === 'asc' ? asc : desc;
+
+    const [countResult] = await db
+      .select({ total: count() })
+      .from(users)
+      .where(whereClause);
+
+    const rows = await db
+      .select({ user: users, ban: userBans })
+      .from(users)
+      .leftJoin(
+        userBans,
+        and(eq(users.id, userBans.userId), isNull(userBans.unbannedAt)),
+      )
+      .where(whereClause)
+      .orderBy(orderFn(sortColumn))
+      .offset((params.page - 1) * params.limit)
+      .limit(params.limit);
+
+    return {
+      data: rows.map((row) => ({
+        user: row.user,
+        ban: row.ban,
+      })),
+      total: countResult.total,
+    };
+  }
+
+  async findByIdWithBan(
+    id: string,
+    executor: DbExecutor = db,
+  ): Promise<{
+    user: UserWithRole;
+    ban: UserBan | null;
+    banHistory: UserBan[];
+  } | null> {
+    const user = await this.findById(id, executor);
+    if (!user) return null;
+
+    const ban = await this.findBanByUserId(id, executor);
+    const banHistory = await this.findBanHistoryByUserId(id, executor);
+
+    return { user, ban, banHistory };
   }
 
   async unbanUser(
@@ -161,6 +270,7 @@ export class UsersRepository {
     executor: DbExecutor = db,
   ): Promise<{
     user: UserWithRole | null;
+    banHistory: UserBan[];
     status: 'SUCCESS' | 'NOT_FOUND' | 'NOT_BANNED';
   }> {
     const [updatedUser] = await executor
@@ -173,8 +283,13 @@ export class UsersRepository {
       .returning();
 
     if (updatedUser) {
-      await executor.delete(userBans).where(eq(userBans.userId, userId));
-      return { user: updatedUser, status: 'SUCCESS' };
+      await executor
+        .update(userBans)
+        .set({ unbannedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(userBans.userId, userId), isNull(userBans.unbannedAt)));
+
+      const banHistory = await this.findBanHistoryByUserId(userId, executor);
+      return { user: updatedUser, banHistory, status: 'SUCCESS' };
     }
 
     const [userExists] = await executor
@@ -184,9 +299,9 @@ export class UsersRepository {
       .limit(1);
 
     if (!userExists) {
-      return { user: null, status: 'NOT_FOUND' };
+      return { user: null, banHistory: [], status: 'NOT_FOUND' };
     }
 
-    return { user: null, status: 'NOT_BANNED' };
+    return { user: null, banHistory: [], status: 'NOT_BANNED' };
   }
 }

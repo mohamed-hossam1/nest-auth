@@ -8,4 +8,5 @@ export type AuthUser = {
   role: UserRole;
   isVerified: boolean;
   isBanned: boolean;
+  sessionId?: string;
 };

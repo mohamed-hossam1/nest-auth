@@ -36,6 +36,7 @@ export class AuthGuard implements CanActivate {
     const token = this.extractAccessToken(request);
 
     let userId: string | undefined;
+    let sessionIdFromRefresh: string | undefined;
 
     if (token) {
       try {
@@ -52,10 +53,12 @@ export class AuthGuard implements CanActivate {
       try {
         const refreshPayload = await this.jwtService.verifyAsync<{
           sub: string;
+          jti?: string;
         }>(request.cookies.refresh_token, {
           secret: this.configService.get('JWT_REFRESH_SECRET'),
         });
         userId = refreshPayload.sub;
+        sessionIdFromRefresh = refreshPayload.jti;
       } catch {
         // Ignore invalid refresh token error; unauthenticated check below will handle missing userId
       }
@@ -87,6 +90,7 @@ export class AuthGuard implements CanActivate {
         role: user.role,
         isVerified: user.isVerified,
         isBanned: user.isBanned,
+        sessionId: sessionIdFromRefresh,
       };
 
       return true;

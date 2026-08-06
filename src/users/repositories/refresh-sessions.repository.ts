@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, gt, isNull, ne } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, ne, count } from 'drizzle-orm';
 import { db, type DbTransaction } from 'src/db';
 import {
   refreshSessions,
@@ -148,6 +148,27 @@ export class RefreshSessionsRepository {
           ne(refreshSessions.id, exceptSessionId),
         ),
       );
+  }
+
+  async findAllByUserId(
+    userId: string,
+    params: { page: number; limit: number },
+    executor: DbExecutor = db,
+  ): Promise<{ data: RefreshSession[]; total: number }> {
+    const [countResult] = await executor
+      .select({ total: count() })
+      .from(refreshSessions)
+      .where(eq(refreshSessions.userId, userId));
+
+    const data = await executor
+      .select()
+      .from(refreshSessions)
+      .where(eq(refreshSessions.userId, userId))
+      .orderBy(desc(refreshSessions.createdAt))
+      .offset((params.page - 1) * params.limit)
+      .limit(params.limit);
+
+    return { data, total: countResult.total };
   }
 
   async delete(id: string, executor: DbExecutor = db) {

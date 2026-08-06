@@ -47,11 +47,11 @@ export const userBans = pgTable('user_bans', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
     .notNull()
-    .unique()
     .references(() => users.id, { onDelete: 'cascade' }),
   bannedAt: timestamp('banned_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
+  unbannedAt: timestamp('unbanned_at', { withTimezone: true }),
   banReason: text('ban_reason').notNull(),
   ...timestamps,
 });
@@ -133,6 +133,29 @@ export const oauthAccounts = pgTable(
   ],
 );
 
+export const adminAuditLogs = pgTable(
+  'admin_audit_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    adminId: uuid('admin_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    adminSessionId: uuid('admin_session_id'),
+    action: text('action').notNull(),
+    targetUserId: uuid('target_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    details: text('details'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('admin_audit_logs_admin_id_idx').on(table.adminId),
+    index('admin_audit_logs_target_user_id_idx').on(table.targetUserId),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
@@ -154,3 +177,6 @@ export type NewRefreshSession = typeof refreshSessions.$inferInsert;
 
 export type OauthAccount = typeof oauthAccounts.$inferSelect;
 export type NewOauthAccount = typeof oauthAccounts.$inferInsert;
+
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+export type NewAdminAuditLog = typeof adminAuditLogs.$inferInsert;

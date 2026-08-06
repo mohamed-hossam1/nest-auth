@@ -15,7 +15,7 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.refreshSessions.userId,
     }),
-    ban: r.one.userBans({
+    bans: r.many.userBans({
       from: r.users.id,
       to: r.userBans.userId,
     }),
