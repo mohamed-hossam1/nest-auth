@@ -12,6 +12,7 @@ import { db } from 'src/db';
 import { BanUserDto } from '../dtos/ban-user.dto';
 import { UsersRepository } from '../repositories/users.repository';
 import { RefreshSessionsRepository } from '../repositories/refresh-sessions.repository';
+import { AdminAuditLogRepository } from '../repositories/admin-audit-log.repository';
 import { toPublicUser } from '../utils/users.mapper';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class BanUserService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly refreshSessionsRepository: RefreshSessionsRepository,
+    private readonly adminAuditLogRepository: AdminAuditLogRepository,
   ) {}
 
   async ban(currentUser: AuthUser, targetUserId: string, dto: BanUserDto) {
@@ -32,7 +34,7 @@ export class BanUserService {
     }
 
     try {
-      const { user, ban } = await db.transaction(async (tx) => {
+      const { user, ban, banHistory } = await db.transaction(async (tx) => {
         const result = await this.usersRepository.banUser(
           targetUserId,
           banReason,
@@ -41,12 +43,23 @@ export class BanUserService {
 
         await this.refreshSessionsRepository.revokeAll(targetUserId, tx);
 
+        await this.adminAuditLogRepository.create(
+          {
+            adminId: currentUser.id,
+            adminSessionId: currentUser.sessionId ?? null,
+            action: 'ban_user',
+            targetUserId,
+            details: JSON.stringify({ banReason }),
+          },
+          tx,
+        );
+
         return result;
       });
 
       return {
         message: AUTH_MESSAGES.USER_BANNED_SUCCESS,
-        user: toPublicUser(user, ban),
+        user: toPublicUser(user, ban, banHistory),
       };
     } catch (error: any) {
       if (error?.code === '23505') {

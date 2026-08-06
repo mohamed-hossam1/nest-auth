@@ -19,6 +19,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { IdempotencyInterceptor } from '../common/interceptors/idempotency.interceptor';
 
 import { SignUpDto } from './dtos/sign-up.dto';
@@ -81,6 +82,7 @@ export class AuthController {
   ) {}
 
   @Post('sign-up')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Register a new account' })
   signUp(@Body() signUpDto: SignUpDto) {
     return this.signUpService.signUp(signUpDto);
@@ -88,6 +90,7 @@ export class AuthController {
 
   @Post('sign-in')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Sign in with email and password' })
   signIn(
     @Body() signInDto: SignInDto,
@@ -128,6 +131,7 @@ export class AuthController {
 
   @Post('resend-verification-email')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 900000 } })
   @ApiOperation({
     summary: 'Resend a verification email',
     description:
@@ -143,6 +147,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @UseInterceptors(IdempotencyInterceptor)
   @ApiOperation({ summary: 'Refresh access token using refresh cookie' })
   @ApiCookieAuth('refresh_token')
@@ -225,6 +230,7 @@ export class AuthController {
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 900000 } })
   @ApiOperation({ summary: 'Request a password reset email' })
   forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.forgotPasswordService.forgotPassword(forgotPasswordDto);
@@ -232,6 +238,7 @@ export class AuthController {
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 900000 } })
   @ApiOperation({ summary: 'Reset password using a reset token' })
   resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.resetPasswordService.resetPassword(resetPasswordDto);
@@ -240,6 +247,7 @@ export class AuthController {
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 900000 } })
   @ApiBearerAuth()
   @ApiCookieAuth('refresh_token')
   @ApiOperation({ summary: 'Change the authenticated user password' })
@@ -259,9 +267,18 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
   @ApiOperation({ summary: 'Set password for an account without one' })
-  setPassword(@User() user: AuthUser, @Body() setPasswordDto: SetPasswordDto) {
-    return this.setPasswordService.setPassword(user, setPasswordDto);
+  setPassword(
+    @User() user: AuthUser,
+    @Body() setPasswordDto: SetPasswordDto,
+    @Req() req: Request,
+  ) {
+    return this.setPasswordService.setPassword(
+      user,
+      setPasswordDto,
+      req.cookies?.refresh_token,
+    );
   }
 
   @Get('google')

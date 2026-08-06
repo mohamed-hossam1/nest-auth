@@ -33,10 +33,13 @@ export class UpdateUserService {
     const ban = updated.isBanned
       ? await this.usersRepository.findBanByUserId(updated.id)
       : null;
+    const banHistory = await this.usersRepository.findBanHistoryByUserId(
+      updated.id,
+    );
 
     return {
       message: AUTH_MESSAGES.USER_UPDATED_SUCCESS,
-      user: toPublicUser(updated, ban),
+      user: toPublicUser(updated, ban, banHistory),
     };
   }
 }

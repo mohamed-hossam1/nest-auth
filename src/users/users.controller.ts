@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import {
   ApiCookieAuth,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
@@ -27,8 +29,13 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import type { AuthUser } from 'src/common/types/auth-user.type';
 import { BanUserDto } from './dtos/ban-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { ListUsersQueryDto } from './dtos/list-users-query.dto';
 import { BanUserService } from './services/ban-user.service';
 import { UnbanUserService } from './services/unban-user.service';
+import { ListUsersService } from './services/list-users.service';
+import { GetUserService } from './services/get-user.service';
+import { AdminListUserSessionsService } from './services/admin-list-user-sessions.service';
+import { AdminRevokeSessionService } from './services/admin-revoke-session.service';
 import { DeleteUserService } from './services/delete-user.service';
 import { DeleteMeService } from './services/delete-me.service';
 import { UpdateUserService } from './services/update-user.service';
@@ -46,8 +53,36 @@ export class UsersController {
     private readonly updateMeService: UpdateMeService,
     private readonly banUserService: BanUserService,
     private readonly unbanUserService: UnbanUserService,
+    private readonly listUsersService: ListUsersService,
+    private readonly getUserService: GetUserService,
+    private readonly adminListUserSessionsService: AdminListUserSessionsService,
+    private readonly adminRevokeSessionService: AdminRevokeSessionService,
     private readonly usersRepository: UsersRepository,
   ) {}
+
+  @Get()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'List all users (admin)',
+    description:
+      'Admin-only. Returns paginated list of users with search, filter, and sort.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, enum: ['active', 'banned'] })
+  @ApiQuery({ name: 'role', required: false, enum: ['user', 'admin'] })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    enum: ['createdAt', 'name', 'email'],
+  })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
+  listUsers(@Query() query: ListUsersQueryDto) {
+    return this.listUsersService.list(query);
+  }
 
   @Get('me')
   @UseGuards(AuthGuard)
@@ -69,6 +104,66 @@ export class UsersController {
         ban: null,
       },
     };
+  }
+
+  @Get(':id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get user details (admin)',
+    description: 'Admin-only. Returns detailed user info with ban data.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID of the user', format: 'uuid' })
+  getUser(@Param('id', ParseUUIDPipe) id: string) {
+    return this.getUserService.getUser(id);
+  }
+
+  @Get(':id/sessions')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'List user sessions (admin)',
+    description:
+      'Admin-only. Returns all sessions (active, revoked, expired) for a user.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID of the user', format: 'uuid' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  listUserSessions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.adminListUserSessionsService.listSessions(
+      id,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+    );
+  }
+
+  @Post(':id/sessions/:sessionId/revoke')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Revoke a user session (admin)',
+    description: 'Admin-only. Revokes a specific session for a user.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID of the user', format: 'uuid' })
+  @ApiParam({
+    name: 'sessionId',
+    description: 'UUID of the session to revoke',
+    format: 'uuid',
+  })
+  revokeSession(
+    @User() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+  ) {
+    return this.adminRevokeSessionService.revoke(user, id, sessionId);
   }
 
   @Patch('me')
@@ -176,7 +271,7 @@ export class UsersController {
     description: 'UUID of the user to unban',
     format: 'uuid',
   })
-  unban(@Param('id', ParseUUIDPipe) id: string) {
-    return this.unbanUserService.unban(id);
+  unban(@User() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.unbanUserService.unban(user, id);
   }
 }

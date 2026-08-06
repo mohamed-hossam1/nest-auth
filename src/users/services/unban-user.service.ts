@@ -4,17 +4,37 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AUTH_MESSAGES } from 'src/common/constants/messages.constant';
+import type { AuthUser } from 'src/common/types/auth-user.type';
 import { db } from 'src/db';
 import { UsersRepository } from '../repositories/users.repository';
+import { AdminAuditLogRepository } from '../repositories/admin-audit-log.repository';
 import { toPublicUser } from '../utils/users.mapper';
 
 @Injectable()
 export class UnbanUserService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly adminAuditLogRepository: AdminAuditLogRepository,
+  ) {}
 
-  async unban(targetUserId: string) {
-    const { user, status } = await db.transaction(async (tx) => {
-      return this.usersRepository.unbanUser(targetUserId, tx);
+  async unban(currentUser: AuthUser, targetUserId: string) {
+    const { user, banHistory, status } = await db.transaction(async (tx) => {
+      const result = await this.usersRepository.unbanUser(targetUserId, tx);
+
+      if (result.status === 'SUCCESS') {
+        await this.adminAuditLogRepository.create(
+          {
+            adminId: currentUser.id,
+            adminSessionId: currentUser.sessionId ?? null,
+            action: 'unban_user',
+            targetUserId,
+            details: null,
+          },
+          tx,
+        );
+      }
+
+      return result;
     });
 
     if (status === 'NOT_FOUND') {
@@ -31,7 +51,7 @@ export class UnbanUserService {
 
     return {
       message: AUTH_MESSAGES.USER_UNBANNED_SUCCESS,
-      user: toPublicUser(user, null),
+      user: toPublicUser(user, null, banHistory),
     };
   }
 }

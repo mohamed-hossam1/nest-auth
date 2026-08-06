@@ -11,18 +11,32 @@ export class EmailService {
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('RESEND_API_KEY');
     this.defaultFrom =
-      this.configService.get<string>('EMAIL_FROM') || 'onboarding@resend.dev';
-    this.resend = new Resend(apiKey);
+      this.configService.get<string>('EMAIL_FROM') || 'noreply@traqon.tech';
+    if (apiKey) {
+      this.resend = new Resend(apiKey);
+    }
   }
 
   async send(email: Email): Promise<boolean> {
-    const response = await this.resend?.emails.send({
-      from: this.defaultFrom,
-      to: email.to,
-      subject: email.subject,
-      html: email.html,
-    });
+    if (!this.resend) {
+      return false;
+    }
 
-    return response?.error ? false : true;
+    try {
+      const response = await this.resend.emails.send({
+        from: this.defaultFrom,
+        to: email.to,
+        subject: email.subject,
+        html: email.html,
+      });
+
+      if (response?.error) {
+        return false;
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

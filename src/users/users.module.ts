@@ -4,6 +4,10 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { TokensModule } from 'src/tokens/tokens.module';
 import { BanUserService } from './services/ban-user.service';
 import { UnbanUserService } from './services/unban-user.service';
+import { ListUsersService } from './services/list-users.service';
+import { GetUserService } from './services/get-user.service';
+import { AdminListUserSessionsService } from './services/admin-list-user-sessions.service';
+import { AdminRevokeSessionService } from './services/admin-revoke-session.service';
 import { DeleteUserService } from './services/delete-user.service';
 import { DeleteMeService } from './services/delete-me.service';
 import { UpdateUserService } from './services/update-user.service';
@@ -11,6 +15,7 @@ import { UpdateMeService } from './services/update-me.service';
 import { UsersController } from './users.controller';
 import { UsersRepository } from './repositories/users.repository';
 import { RefreshSessionsRepository } from './repositories/refresh-sessions.repository';
+import { AdminAuditLogRepository } from './repositories/admin-audit-log.repository';
 import { AuthTokensRepository } from './repositories/auth-tokens.repository';
 import { OauthAccountsRepository } from './repositories/oauth-accounts.repository';
 
@@ -20,6 +25,7 @@ import { OauthAccountsRepository } from './repositories/oauth-accounts.repositor
   providers: [
     UsersRepository,
     RefreshSessionsRepository,
+    AdminAuditLogRepository,
     AuthTokensRepository,
     OauthAccountsRepository,
     DeleteUserService,
@@ -28,12 +34,17 @@ import { OauthAccountsRepository } from './repositories/oauth-accounts.repositor
     UpdateMeService,
     BanUserService,
     UnbanUserService,
+    ListUsersService,
+    GetUserService,
+    AdminListUserSessionsService,
+    AdminRevokeSessionService,
     AuthGuard,
     RolesGuard,
   ],
   exports: [
     UsersRepository,
     RefreshSessionsRepository,
+    AdminAuditLogRepository,
     AuthTokensRepository,
     OauthAccountsRepository,
   ],
